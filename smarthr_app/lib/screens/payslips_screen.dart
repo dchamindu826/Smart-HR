@@ -6,6 +6,7 @@ import '../core/api.dart';
 import '../core/format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/creative_background.dart';
 
 class PayslipsScreen extends StatelessWidget {
   const PayslipsScreen({super.key});
@@ -13,42 +14,52 @@ class PayslipsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Payslips')),
-      body: Loader<List<Map<String, dynamic>>>(
-        load: () async => asList(await Api.instance.get('/payslips/mine')),
-        builder: (context, rows, reload) {
-          if (rows.isEmpty) {
-            return ListView(children: const [EmptyState(icon: Icons.receipt_long_outlined, title: 'No payslips yet', text: 'Your payslip appears here when HR releases the month\'s payroll.')]);
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final r = rows[i];
-              return Tile(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PayslipScreen(id: '${r['id']}', period: '${r['period']}'))),
-                child: Row(children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(color: Brand.blue.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.receipt_long, color: Brand.blue),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(periodLabel('${r['period']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text('Gross ${rs(r['gross'])}', style: TextStyle(color: c.onSurfaceVariant, fontSize: 13)),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('Payslips'),
+        backgroundColor: Colors.transparent,
+      ),
+      body: CreativeBackground(
+        theme: BackgroundTheme.payslips,
+        child: SafeArea(
+          bottom: false,
+          child: Loader<List<Map<String, dynamic>>>(
+            load: () async => asList(await Api.instance.get('/payslips/mine')),
+            builder: (context, rows, reload) {
+              if (rows.isEmpty) {
+                return ListView(children: const [EmptyState(icon: Icons.receipt_long_outlined, title: 'No payslips yet', text: 'Your payslip appears here when HR releases the month\'s payroll.')]);
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
+                itemCount: rows.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  final r = rows[i];
+                  return Tile(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PayslipScreen(id: '${r['id']}', period: '${r['period']}'))),
+                    child: Row(children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(color: Brand.blue.withValues(alpha: .12), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.receipt_long, color: Brand.blue),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(periodLabel('${r['period']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text('Gross ${rs(r['gross'])}', style: TextStyle(color: c.onSurfaceVariant, fontSize: 13)),
+                        ]),
+                      ),
+                      Text(rs(r['net']), style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const Icon(Icons.chevron_right),
                     ]),
-                  ),
-                  Text(rs(r['net']), style: const TextStyle(fontWeight: FontWeight.w800)),
-                  const Icon(Icons.chevron_right),
-                ]),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }

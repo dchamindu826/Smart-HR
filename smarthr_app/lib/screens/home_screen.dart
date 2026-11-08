@@ -10,6 +10,7 @@ import '../core/punch_queue.dart';
 import '../core/session.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/creative_background.dart';
 import 'overtime_screen.dart';
 import 'punch_confirm_modal.dart';
 
@@ -157,23 +158,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final me = context.watch<Session>().me!;
     final t = _today;
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
-            children: [
-              _buildHeader(context, me),
-              const SizedBox(height: 16),
-              if (_error != null && t == null) ErrorState(message: _error!, onRetry: _load),
-              if (t == null && _error == null)
-                const Padding(
-                  padding: EdgeInsets.all(60),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              if (t != null) ..._content(context, me, t),
-            ],
+      body: CreativeBackground(
+        theme: BackgroundTheme.home,
+        child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
+              children: [
+                _buildHeader(context, me),
+                const SizedBox(height: 16),
+                if (_error != null && t == null) ErrorState(message: _error!, onRetry: _load),
+                if (t == null && _error == null)
+                  const Padding(
+                    padding: EdgeInsets.all(60),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                if (t != null) ..._content(context, me, t),
+              ],
+            ),
           ),
         ),
       ),

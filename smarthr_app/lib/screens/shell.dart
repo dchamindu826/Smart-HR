@@ -44,8 +44,10 @@ class _ShellState extends State<Shell> {
       body: IndexedStack(index: i, children: pages),
       bottomNavigationBar: SafeArea(
         top: false,
+        bottom: true,
+        minimum: const EdgeInsets.only(bottom: 10),
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),

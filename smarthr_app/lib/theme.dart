@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Colours from the SmartHR logo & modern design system.
 class Brand {
@@ -58,6 +59,15 @@ ThemeData buildTheme(Brightness b) {
       scrolledUnderElevation: 0,
       centerTitle: false,
       foregroundColor: dark ? Colors.white : Brand.ink,
+      systemOverlayStyle: dark
+          ? SystemUiOverlayStyle.light
+          : const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarBrightness: Brightness.light,
+              statusBarIconBrightness: Brightness.dark,
+              systemNavigationBarColor: Colors.transparent,
+              systemNavigationBarIconBrightness: Brightness.dark,
+            ),
       titleTextStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,

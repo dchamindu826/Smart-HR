@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/api.dart';
 import '../core/format.dart';
 import '../theme.dart';
@@ -12,11 +13,19 @@ class RosterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('My roster'),
         backgroundColor: Colors.transparent,
+        systemOverlayStyle: dark
+            ? SystemUiOverlayStyle.light
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarBrightness: Brightness.light,
+                statusBarIconBrightness: Brightness.dark,
+              ),
       ),
       body: CreativeBackground(
         theme: BackgroundTheme.roster,
@@ -32,7 +41,7 @@ class RosterScreen extends StatelessWidget {
                 ]);
               }
               return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
                 itemCount: days.length,
                 separatorBuilder: (_, i) => SizedBox(height: i == 6 ? 22 : 8),
                 itemBuilder: (context, i) {

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../core/api.dart';
@@ -13,11 +14,19 @@ class PayslipsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Payslips'),
         backgroundColor: Colors.transparent,
+        systemOverlayStyle: dark
+            ? SystemUiOverlayStyle.light
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarBrightness: Brightness.light,
+                statusBarIconBrightness: Brightness.dark,
+              ),
       ),
       body: CreativeBackground(
         theme: BackgroundTheme.payslips,
@@ -30,7 +39,7 @@ class PayslipsScreen extends StatelessWidget {
                 return ListView(children: const [EmptyState(icon: Icons.receipt_long_outlined, title: 'No payslips yet', text: 'Your payslip appears here when HR releases the month\'s payroll.')]);
               }
               return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
                 itemCount: rows.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, i) {

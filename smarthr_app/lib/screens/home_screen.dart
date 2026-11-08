@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/api.dart';
 import '../core/format.dart';
@@ -156,27 +157,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final me = context.watch<Session>().me!;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final t = _today;
-    return Scaffold(
-      body: CreativeBackground(
-        theme: BackgroundTheme.home,
-        child: SafeArea(
-          bottom: false,
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 110),
-              children: [
-                _buildHeader(context, me),
-                const SizedBox(height: 16),
-                if (_error != null && t == null) ErrorState(message: _error!, onRetry: _load),
-                if (t == null && _error == null)
-                  const Padding(
-                    padding: EdgeInsets.all(60),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (t != null) ..._content(context, me, t),
-              ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: dark
+          ? SystemUiOverlayStyle.light
+          : const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarBrightness: Brightness.light,
+              statusBarIconBrightness: Brightness.dark,
+            ),
+      child: Scaffold(
+        body: CreativeBackground(
+          theme: BackgroundTheme.home,
+          child: SafeArea(
+            bottom: false,
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 160),
+                children: [
+                  _buildHeader(context, me),
+                  const SizedBox(height: 16),
+                  if (_error != null && t == null) ErrorState(message: _error!, onRetry: _load),
+                  if (t == null && _error == null)
+                    const Padding(
+                      padding: EdgeInsets.all(60),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  if (t != null) ..._content(context, me, t),
+                ],
+              ),
             ),
           ),
         ),

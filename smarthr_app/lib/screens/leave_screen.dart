@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../core/api.dart';
 import '../core/format.dart';
@@ -78,6 +79,13 @@ class _LeaveScreenState extends State<LeaveScreen> {
       appBar: AppBar(
         title: const Text('Leave'),
         backgroundColor: Colors.transparent,
+        systemOverlayStyle: dark
+            ? SystemUiOverlayStyle.light
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarBrightness: Brightness.light,
+                statusBarIconBrightness: Brightness.dark,
+              ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -120,7 +128,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
             key: _key,
             load: _load,
             builder: (context, d, reload) => ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
               children: [
                 const SectionTitle('Balance this year'),
                 const SizedBox(height: 10),

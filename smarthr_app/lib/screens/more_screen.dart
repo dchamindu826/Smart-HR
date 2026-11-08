@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
@@ -60,19 +61,31 @@ class MoreScreen extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: onTap,
         );
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Account & Profile'),
-        backgroundColor: Colors.transparent,
-      ),
-      body: CreativeBackground(
-        theme: BackgroundTheme.profile,
-        child: SafeArea(
-          bottom: false,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 115),
-            children: [
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          title: const Text(
+            'Account & Profile',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 19,
+              letterSpacing: -0.2,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: CreativeBackground(
+          theme: BackgroundTheme.profile,
+          child: SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
+              children: [
               // ── Creative Profile Card (Matching Image 2) ──
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
@@ -202,7 +215,7 @@ class MoreScreen extends StatelessWidget {
               const SizedBox(height: 24),
               Center(
                 child: Text(
-                  'SmartHR by Lumi AI',
+                  'Smart HR by Lumi AI',
                   style: TextStyle(color: c.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -210,6 +223,7 @@ class MoreScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

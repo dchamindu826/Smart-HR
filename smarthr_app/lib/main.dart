@@ -31,7 +31,7 @@ class SmartHrApp extends StatelessWidget {
       home = const Shell();
     }
     return MaterialApp(
-      title: 'SmartHR',
+      title: 'Smart HR',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),

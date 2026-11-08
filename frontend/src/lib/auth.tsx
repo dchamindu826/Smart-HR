@@ -22,6 +22,9 @@ export interface Me {
       firstName: string;
       lastName: string;
       designation: string | null;
+      photoPath: string | null;
+      dob: string | null;
+      birthdayOptOut: boolean;
       branch: { id: string; name: string } | null;
       department: { id: string; name: string } | null;
     };

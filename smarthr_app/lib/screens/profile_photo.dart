@@ -103,3 +103,4 @@ Future<void> setBirthdayVisible(BuildContext context, bool visible) async {
     if (context.mounted) toast(context, 'Could not update preference.', error: true);
   }
 }
+

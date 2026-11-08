@@ -439,6 +439,13 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                     ),
                     const SizedBox(height: 8),
                     if (_requiresLocation) ...[
+                      if (_mode == 'REMOTE' && !widget.me.requireLocation) ...[
+                        Text(
+                          'Remote attendance requires GPS. If you are at work or GPS is unavailable, switch to Office.',
+                          style: TextStyle(fontSize: 12, color: dark ? const Color(0xFF94A3B8) : Brand.inkMuted),
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                       if (_locLoading) ...[
                         Row(
                           children: [
@@ -466,7 +473,9 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                       ] else if (_locError != null) ...[
                         Text(_locError!, style: const TextStyle(fontSize: 12.5, color: Brand.bad)),
                         const SizedBox(height: 8),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             OutlinedButton.icon(
                               onPressed: _fetchLocation,
@@ -477,8 +486,19 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                                 minimumSize: Size.zero,
                               ),
                             ),
+                            if (!widget.me.requireLocation && _mode == 'REMOTE')
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() => _mode = 'OFFICE');
+                                },
+                                icon: const Icon(Icons.apartment_rounded, size: 16, color: Brand.blue),
+                                label: const Text('Switch to Office', style: TextStyle(color: Brand.blue)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  minimumSize: Size.zero,
+                                ),
+                              ),
                             if (_locCanOpenSettings) ...[
-                              const SizedBox(width: 8),
                               FilledButton(
                                 onPressed: LocationService.openSettings,
                                 style: FilledButton.styleFrom(

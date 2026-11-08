@@ -394,15 +394,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // ── Main Attendance Dial Bento Card ──
       Tile(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-        glow: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            Brand.magenta.withValues(alpha: 0.08),
-            dark ? const Color(0xFF131C31) : Colors.white,
-            Brand.blue.withValues(alpha: 0.06),
-          ],
-        ),
         child: Column(
           children: [
             // Status & Time since row
@@ -466,8 +457,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 _policyChip(
                   icon: Icons.location_on_rounded,
-                  label: me.requireLocation ? 'GPS Required' : 'GPS Optional',
-                  active: me.requireLocation,
+                  label: me.requireLocation
+                      ? 'GPS Required'
+                      : (_mode == 'REMOTE' ? 'GPS Required (Remote)' : 'GPS Optional (Office)'),
+                  active: me.requireLocation || _mode == 'REMOTE',
                   dark: dark,
                 ),
                 _policyChip(

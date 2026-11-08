@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../widgets/avatar.dart';
 import 'api.dart';
 import 'push.dart';
 
@@ -25,6 +26,15 @@ class Me {
   bool get requireFace => attendance?['requireFace'] == true;
   bool get allowRemote => attendance?['allowRemote'] == true;
   bool get approves => isManager || can('leave.approve') || can('overtime.approve');
+  bool get hasPhoto => employee?['photoPath'] != null;
+  String? get birthdayMd {
+    final dob = employee?['dob'];
+    if (dob == null) return null;
+    final s = '$dob';
+    if (s.length >= 10) return s.substring(5, 10);
+    return null;
+  }
+  bool get birthdayHidden => employee?['birthdayOptOut'] == true;
 }
 
 enum AuthState { loading, signedOut, signedIn }
@@ -105,6 +115,7 @@ class Session extends ChangeNotifier {
   }
 
   void _signedOut() {
+    PhotoCache.bump();
     me = null;
     state = AuthState.signedOut;
     notifyListeners();

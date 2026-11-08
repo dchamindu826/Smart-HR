@@ -96,29 +96,20 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
   Future<void> _captureFace() async {
     setState(() => _cameraLoading = true);
     try {
-      // Prefer front camera for selfie
-      XFile? photo = await _picker.pickImage(
+      final photo = await _picker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.front,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
       );
-      // Simulator fallback: if camera wasn't available, allow gallery
-      if (photo == null && !Platform.isAndroid && !Platform.isIOS) {
-        photo = await _picker.pickImage(source: ImageSource.gallery);
-      }
       if (!mounted) return;
       if (photo != null) {
         setState(() => _facePhoto = photo);
       }
-    } catch (e) {
-      // In simulator where camera is unavailable, provide gallery fallback
-      try {
-        final photo = await _picker.pickImage(source: ImageSource.gallery);
-        if (mounted && photo != null) setState(() => _facePhoto = photo);
-      } catch (_) {
-        if (mounted) toast(context, 'Camera unavailable: $e', error: true);
+    } catch (_) {
+      if (mounted) {
+        toast(context, 'Could not open the camera. Allow camera access in Settings and try again.', error: true);
       }
     } finally {
       if (mounted) setState(() => _cameraLoading = false);
@@ -130,7 +121,7 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
       'confirmed': true,
       'mode': _mode,
       'fix': _fix,
-      'faceVerified': _requiresFace ? true : null,
+      'faceVerified': null,
       'facePhoto': _facePhoto,
     });
   }
@@ -563,7 +554,7 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                     if (_requiresFace) ...[
                       if (_facePhoto == null) ...[
                         Text(
-                          'Company HR policy requires a live selfie to verify mark in.',
+                          'Your company asks for a live selfie when you mark in.',
                           style: TextStyle(fontSize: 12.5, color: dark ? Colors.white70 : Brand.inkMuted),
                         ),
                         const SizedBox(height: 12),
@@ -617,7 +608,7 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('Face Photo Ready', style: TextStyle(fontWeight: FontWeight.w700, color: Brand.ok)),
-                                  Text('Verified for mark in', style: TextStyle(fontSize: 12, color: dark ? Colors.white60 : Brand.inkMuted)),
+                                  Text('Selfie taken', style: TextStyle(fontSize: 12, color: dark ? Colors.white60 : Brand.inkMuted)),
                                 ],
                               ),
                             ),

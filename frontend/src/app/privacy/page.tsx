@@ -16,6 +16,9 @@ export default function PrivacyPage() {
         <li><b>Account details</b> your employer enters: name, employee number, phone, email, job, department, branch, bank and EPF/ETF numbers, salary.</li>
         <li><b>Attendance</b>: the time you mark in and out, office or remote, and the device used.</li>
         <li><b>Location</b>: only at the moment you press Mark in or Mark out, and only when your employer requires it or you work remotely. We do not track location in the background.</li>
+        <li><b>Profile photo</b>: if you add one in the app. Your employer’s HR and colleagues in the same company can see it.</li>
+        <li><b>Selfie</b>: only if your employer turns this on, the app takes a photo with the front camera when you mark in. It stays on your phone for that mark in; it is not uploaded or used for face recognition.</li>
+        <li><b>Birthday</b>: day and month only, shown to colleagues as a reminder. You can hide it in the app (More → Show my birthday to colleagues). Your age is never shown.</li>
         <li><b>Leave, overtime, payslips, announcements, messages and asset requests</b> you or your employer create.</li>
         <li><b>Technical data</b>: app version, sign-in times and a notification token, used to keep your account secure.</li>
         <li><b>Website visitors</b>: if you contact us on WhatsApp or by email, we keep your message and contact details to reply to you.</li>

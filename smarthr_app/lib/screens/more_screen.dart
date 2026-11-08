@@ -4,16 +4,18 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../core/api.dart';
-import '../core/format.dart';
 import '../core/session.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/common.dart';
 import '../widgets/creative_background.dart';
 import 'approvals_screen.dart';
 import 'attendance_history_screen.dart';
+import 'birthdays_screen.dart';
 import 'change_password_screen.dart';
 import 'messages_screen.dart';
 import 'overtime_screen.dart';
+import 'profile_photo.dart';
 import 'simple_screens.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -102,34 +104,33 @@ class MoreScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: .2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2.5),
+                    GestureDetector(
+                      onTap: () => changeProfilePhoto(context),
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          PersonAvatar(
+                            name: me.name,
+                            photoPath: me.hasPhoto ? '/me/photo' : null,
+                            size: 84,
+                            ring: Colors.white,
                           ),
-                          child: Center(
-                            child: Text(
-                              initials(me.name),
-                              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                ),
+                              ],
                             ),
+                            child: const Icon(Icons.camera_alt_rounded, size: 16, color: Brand.navy),
                           ),
-                        ),
-                        Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: Brand.ok,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -172,6 +173,8 @@ class MoreScreen extends StatelessWidget {
                       item(Icons.chat_bubble_outline_rounded, 'Messages', () => _go(context, const MessagesScreen())),
                     ],
                     const Divider(height: 1, indent: 56),
+                    item(Icons.cake_outlined, 'Birthdays this week', () => _go(context, const BirthdaysScreen())),
+                    const Divider(height: 1, indent: 56),
                     item(Icons.campaign_outlined, 'Announcements', () => _go(context, const AnnouncementsScreen())),
                     const Divider(height: 1, indent: 56),
                     item(Icons.notifications_none_rounded, 'Notifications', () => _go(context, const NotificationsScreen())),
@@ -198,6 +201,15 @@ class MoreScreen extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
+                    SwitchListTile(
+                      title: const Text('Show my birthday to colleagues'),
+                      subtitle: me.birthdayMd == null
+                          ? const Text('HR has not added your birthday yet.')
+                          : Text(!me.birthdayHidden ? 'Colleagues see your birthday (day and month).' : 'Your birthday is hidden from colleagues.'),
+                      value: !me.birthdayHidden,
+                      onChanged: me.birthdayMd == null ? null : (v) => setBirthdayVisible(context, v),
+                    ),
+                    const Divider(height: 1),
                     item(Icons.lock_outline_rounded, 'Change password', () => _go(context, const ChangePasswordScreen())),
                     const Divider(height: 1, indent: 56),
                     item(Icons.privacy_tip_outlined, 'Privacy policy', () => launchUrl(Uri.parse(AppConfig.privacyUrl), mode: LaunchMode.externalApplication)),

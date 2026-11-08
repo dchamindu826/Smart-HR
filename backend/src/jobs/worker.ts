@@ -71,13 +71,15 @@ async function birthdaysJob(today: string) {
   for (const t of await activeTenants()) {
     if (!readSettings(t.settings).birthdayNotifications) continue;
     await once('birthdays', `${t.id}:${today}`, async () => {
-      const emps = await db.employee.findMany({ where: { tenantId: t.id, status: 'ACTIVE', birthdayOptOut: false, dob: { not: null } }, select: { id: true, firstName: true, lastName: true, callingName: true, dob: true, departmentId: true, user: { select: { id: true } } } });
+      const emps = await db.employee.findMany({ where: { tenantId: t.id, status: 'ACTIVE', dob: { not: null } }, select: { id: true, firstName: true, lastName: true, callingName: true, dob: true, birthdayOptOut: true, departmentId: true, user: { select: { id: true } } } });
       const todays = emps.filter((e) => e.dob!.toISOString().slice(5, 10) === md);
       if (!todays.length) return { count: 0 };
       const users = await db.user.findMany({ where: { tenantId: t.id, active: true }, select: { id: true } });
       for (const e of todays) {
         const name = `${e.callingName || e.firstName} ${e.lastName}`;
-        await notify({ tenantId: t.id, userIds: users.map((u) => u.id).filter((id) => id !== e.user?.id), type: 'birthday', title: `🎂 It's ${name}'s birthday today`, body: 'Send your wishes!', link: '/announcements' });
+        if (!e.birthdayOptOut) {
+          await notify({ tenantId: t.id, userIds: users.map((u) => u.id).filter((id) => id !== e.user?.id), type: 'birthday', title: `🎂 It's ${name}'s birthday today`, body: 'Send your wishes!', link: '/announcements' });
+        }
         if (e.user) await notify({ tenantId: t.id, userIds: [e.user.id], type: 'birthday.self', title: `Happy birthday, ${e.callingName || e.firstName}! 🎉`, body: `Best wishes from everyone at ${t.name}.` });
       }
       return { count: todays.length };

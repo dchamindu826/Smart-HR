@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../config.dart';
 import 'token_store.dart';
@@ -107,6 +108,41 @@ class Api {
   Future<dynamic> post(String path, [Object? body]) async {
     try {
       return (await dio.post(path, data: body ?? {})).data;
+    } catch (e) {
+      throw ApiError.from(e);
+    }
+  }
+
+  Future<dynamic> patch(String path, [Object? body]) async {
+    try {
+      return (await dio.patch(path, data: body ?? {})).data;
+    } catch (e) {
+      throw ApiError.from(e);
+    }
+  }
+
+  Future<dynamic> upload(String path, String filePath, {String? filename}) async {
+    try {
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: filename),
+      });
+      return (await dio.post(path, data: form)).data;
+    } catch (e) {
+      throw ApiError.from(e);
+    }
+  }
+
+  Future<Uint8List?> bytes(String path) async {
+    try {
+      final r = await dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (r.data == null) return null;
+      return Uint8List.fromList(r.data!);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw ApiError.from(e);
     } catch (e) {
       throw ApiError.from(e);
     }

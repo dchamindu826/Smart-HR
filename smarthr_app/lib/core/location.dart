@@ -35,7 +35,7 @@ class LocationService {
       return Fix(pos.latitude, pos.longitude, pos.accuracy, pos.isMocked);
     } catch (_) {
       final last = await Geolocator.getLastKnownPosition();
-      if (last != null) {
+      if (last != null && DateTime.now().difference(last.timestamp).inMinutes < 2) {
         return Fix(last.latitude, last.longitude, last.accuracy, last.isMocked);
       }
       rethrow;

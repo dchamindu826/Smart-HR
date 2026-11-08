@@ -134,7 +134,7 @@ export async function me(ctx: Ctx) {
         id: true, name: true, email: true, phone: true, role: true, mustChangePassword: true, branchScope: true, deptScope: true,
         employee: {
           select: {
-            id: true, empNo: true, firstName: true, lastName: true, designation: true, photoPath: true, joinDate: true,
+            id: true, empNo: true, firstName: true, lastName: true, designation: true, photoPath: true, dob: true, birthdayOptOut: true, joinDate: true,
             allowRemote: true, requireLocation: true, requireFace: true, remoteLat: true, remoteLng: true,
             branch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } },
             manager: { select: { id: true, firstName: true, lastName: true } },
@@ -192,4 +192,22 @@ export async function savePushToken(ctx: Ctx, token: string, platform: string) {
 export async function removePushToken(ctx: Ctx, token: string) {
   if (ctx.support) throw forbidden('Support view is read-only.');
   await db.pushToken.deleteMany({ where: { token, userId: ctx.userId } });
+}
+
+export async function requestDeletion(ctx: Ctx, reason: string | null) {
+  if (ctx.support) throw forbidden('Support view is read-only.');
+  const hr = await db.user.findMany({ where: { tenantId: ctx.tenantId, active: true, role: { in: ['OWNER', 'HR_MANAGER'] } }, select: { id: true } });
+  await db.notification.createMany({
+    data: hr.map((u) => ({ tenantId: ctx.tenantId, userId: u.id, type: 'account.deletion', title: `Account deletion request: ${ctx.name}`, body: reason ?? 'Asked from the mobile app.', link: '/settings/users' })),
+  });
+  await db.auditLog.create({ data: { tenantId: ctx.tenantId, actorId: ctx.userId, actorName: ctx.name, action: 'user.deletion.request', entity: 'User', entityId: ctx.userId, after: { reason } } });
+  return { ok: true, message: 'Your request was sent to HR. They will delete your login and tell you when it is done. Payroll and attendance records the company must keep by law are kept.' };
+}
+
+export async function setBirthdayHidden(ctx: Ctx, hidden: boolean) {
+  if (ctx.support) throw forbidden('Support view is read-only.');
+  if (!ctx.employeeId) throw badRequest('This login is not linked to an employee.');
+  await db.employee.update({ where: { id: ctx.employeeId }, data: { birthdayOptOut: hidden } });
+  await db.auditLog.create({ data: { tenantId: ctx.tenantId, actorId: ctx.userId, actorName: ctx.name, action: 'employee.birthday.visibility', entity: 'Employee', entityId: ctx.employeeId, after: { birthdayOptOut: hidden } } });
+  return { ok: true, birthdayOptOut: hidden };
 }

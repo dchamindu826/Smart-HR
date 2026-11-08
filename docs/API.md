@@ -31,6 +31,13 @@ Generated from `backend/src/modules/*/routes.ts`. Request bodies are the zod sch
 | GET | `/api/v1/me` |  |
 | POST | `/api/v1/me/push-token` |  |
 | DELETE | `/api/v1/me/push-token` |  |
+| POST | `/api/v1/me/deletion-request` | Request account deletion sent to HR |
+| POST | `/api/v1/me/photo` | Upload profile photo (multipart form) |
+| GET | `/api/v1/me/photo` | Stream own profile photo |
+| DELETE | `/api/v1/me/photo` | Remove own profile photo |
+| GET | `/api/v1/me/people/:employeeId/photo` | Stream colleague profile photo |
+| PATCH | `/api/v1/me/preferences` | Update user preferences (birthdayOptOut) |
+| GET | `/api/v1/me/birthdays` | Upcoming birthdays in the next 7 days |
 
 ## Attendance (app + console)
 

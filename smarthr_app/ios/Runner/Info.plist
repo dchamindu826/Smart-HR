@@ -48,13 +48,18 @@
 		</dict>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SmartHR needs your location to verify attendance at your workplace or remote work address.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>SmartHR needs your location to verify attendance at your workplace or remote work address.</string>
+	<string>Smart HR reads your location only when you tap Mark in or Mark out, so your employer can confirm you are at your workplace or approved remote location.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>SmartHR uses the camera to capture a selfie photo when marking in.</string>
+	<string>Smart HR uses the camera to take your profile photo, and a selfie when your company requires one to mark in.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SmartHR needs access to photos for uploading documents and profile images.</string>
+	<string>Smart HR lets you choose a profile photo from your library.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>mailto</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -64,8 +69,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

@@ -499,6 +499,19 @@ export async function setPhoto(ctx: Ctx, employeeId: string, file: Express.Multe
   return { ok: true };
 }
 
+export async function removePhoto(ctx: Ctx, employeeId: string) {
+  assertWritable(ctx);
+  if (ctx.employeeId !== employeeId) {
+    assertCan(ctx, 'employee.edit');
+    await assertEmployeeInScope(ctx, employeeId);
+  }
+  const e = await db.employee.findFirstOrThrow({ where: { id: employeeId, tenantId: ctx.tenantId }, select: { photoPath: true } });
+  if (!e.photoPath) return { ok: true };
+  await db.employee.update({ where: { id: employeeId }, data: { photoPath: null } });
+  await removeFile(e.photoPath);
+  return { ok: true };
+}
+
 export async function photoFile(ctx: Ctx, employeeId: string) {
   const e = await db.employee.findFirst({ where: { id: employeeId, tenantId: ctx.tenantId }, select: { photoPath: true } });
   if (!e?.photoPath) throw notFound('Photo');
@@ -510,16 +523,16 @@ export async function photoFile(ctx: Ctx, employeeId: string) {
 export async function birthdays(ctx: Ctx, from: string, days = 7) {
   const list = await db.employee.findMany({
     where: { tenantId: ctx.tenantId, status: 'ACTIVE', birthdayOptOut: false, dob: { not: null } },
-    select: { id: true, firstName: true, lastName: true, callingName: true, dob: true, designation: true, department: { select: { name: true } } },
+    select: { id: true, firstName: true, lastName: true, callingName: true, dob: true, designation: true, photoPath: true, department: { select: { name: true } } },
   });
-  const out: { id: string; name: string; designation: string | null; department: string | null; day: string; inDays: number }[] = [];
+  const out: { id: string; name: string; designation: string | null; department: string | null; day: string; inDays: number; hasPhoto: boolean }[] = [];
   const start = new Date(from + 'T00:00:00Z');
   for (let d = 0; d < days; d++) {
     const date = new Date(start.getTime() + d * 86_400_000);
     const md = date.toISOString().slice(5, 10);
     for (const e of list) {
       if (e.dob && e.dob.toISOString().slice(5, 10) === md) {
-        out.push({ id: e.id, name: `${e.callingName || e.firstName} ${e.lastName}`, designation: e.designation, department: e.department?.name ?? null, day: md, inDays: d });
+        out.push({ id: e.id, name: `${e.callingName || e.firstName} ${e.lastName}`, designation: e.designation, department: e.department?.name ?? null, day: md, inDays: d, hasPhoto: !!e.photoPath });
       }
     }
   }

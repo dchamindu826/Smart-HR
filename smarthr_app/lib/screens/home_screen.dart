@@ -10,8 +10,10 @@ import '../core/location.dart';
 import '../core/punch_queue.dart';
 import '../core/session.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/common.dart';
 import '../widgets/creative_background.dart';
+import 'birthdays_screen.dart';
 import 'overtime_screen.dart';
 import 'punch_confirm_modal.dart';
 
@@ -124,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       accuracy: fix?.accuracy,
       mocked: fix?.mocked ?? false,
       faceVerified: faceVerified,
-      faceScore: faceVerified == true ? 0.95 : null,
+      faceScore: null,
     );
 
     try {
@@ -179,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   _buildHeader(context, me),
                   const SizedBox(height: 16),
+                  const BirthdayTodayBanner(),
                   if (_error != null && t == null) ErrorState(message: _error!, onRetry: _load),
                   if (t == null && _error == null)
                     const Padding(
@@ -201,27 +204,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Row(
       children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            gradient: Brand.gradient,
+        if (me.hasPhoto)
+          ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Brand.magenta.withValues(alpha: 0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+            child: PersonAvatar(
+              name: me.name,
+              photoPath: '/me/photo',
+              size: 50,
+            ),
+          )
+        else
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: Brand.gradient,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Brand.magenta.withValues(alpha: 0.35),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                me.name.isNotEmpty ? me.name[0] : 'S',
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
               ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              me.name.isNotEmpty ? me.name[0] : 'S',
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ),
-        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(

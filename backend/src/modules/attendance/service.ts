@@ -426,7 +426,8 @@ export async function requestCorrection(ctx: Ctx, i: { date: string; start: stri
 
 export async function listCorrections(ctx: Ctx, q: { status?: string; mine?: boolean }) {
   if (q.mine) {
-    return db.attendanceCorrection.findMany({ where: { tenantId: ctx.tenantId, employeeId: ctx.employeeId ?? '__' }, orderBy: { createdAt: 'desc' }, take: 100 });
+    const mine = await db.attendanceCorrection.findMany({ where: { tenantId: ctx.tenantId, employeeId: ctx.employeeId ?? '__' }, orderBy: { createdAt: 'desc' }, take: 100 });
+    return mine.map((r) => ({ ...r, date: fromDbDate(r.date) }));
   }
   assertCan(ctx, 'attendance.correct');
   const scope = await employeeScope(ctx);

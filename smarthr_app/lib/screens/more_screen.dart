@@ -231,6 +231,7 @@ class MoreScreen extends StatelessWidget {
                   style: TextStyle(color: c.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
+              const SizedBox(height: 60),
             ],
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/session.dart';
 import '../theme.dart';
@@ -38,15 +39,31 @@ class _ShellState extends State<Shell> {
     ];
 
     final i = _i.clamp(0, pages.length - 1);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      extendBody: true,
-      body: IndexedStack(index: i, children: pages),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        bottom: true,
-        minimum: const EdgeInsets.only(bottom: 10),
-        child: Container(
+    // More screen (index 4) has a dark curved header -> light status icons.
+    // Other screens (Today, Roster, Leave, Payslips) have white/light backgrounds -> dark status icons.
+    final isMoreTab = tabs[i].label == 'More';
+    final overlayStyle = dark
+        ? SystemUiOverlayStyle.light
+        : (isMoreTab
+            ? SystemUiOverlayStyle.light
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarBrightness: Brightness.light,
+                statusBarIconBrightness: Brightness.dark,
+              ));
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Scaffold(
+        extendBody: true,
+        body: IndexedStack(index: i, children: pages),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          bottom: true,
+          minimum: const EdgeInsets.only(bottom: 10),
+          child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
@@ -117,6 +134,7 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

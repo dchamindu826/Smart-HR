@@ -443,7 +443,7 @@ export function Landing() {
             </div>
             <div className="lp-plans" key={lang}>
               {currentPlans.map((p, i) => (
-                <div key={p.name} className={`lp-plan${p.popular ? ' pop' : ''}`} data-reveal style={{ ['--d' as string]: `${i * 90}ms` }}>
+                <div key={p.name} className={`lp-plan${p.popular ? ' popular' : ''}`} data-reveal style={{ ['--d' as string]: `${i * 90}ms` }}>
                   {p.popular && <span className="lp-plan-tag" lang={lang}>★ {plansHead.popular[lang]}</span>}
                   <h3>{p.name}</h3>
                   <p className="lp-plan-max" lang={lang}>{fill(plansHead.employees[lang], { n: p.max })}</p>

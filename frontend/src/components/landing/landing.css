@@ -266,12 +266,12 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 80px; }
 @media (max-width: 860px) { .lp-steps { grid-template-columns: 1fr; } .lp-steps::before { display: none; } }
 
 /* ── plans ── */
-.lp-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; padding-top: 26px; }
-.lp-plan { position: relative; display: flex; flex-direction: column; padding: 34px 28px; border-radius: 26px; background: #fff; border: 1px solid var(--l-rule); box-shadow: var(--l-shadow); transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, border-color .35s; }
+.lp-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; padding-top: 26px; overflow: visible; }
+.lp-plan { position: relative; display: flex; flex-direction: column; padding: 34px 28px; border-radius: 26px; background: #fff; border: 1px solid var(--l-rule); box-shadow: var(--l-shadow); transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, border-color .35s; overflow: visible !important; }
 .lp-plan:hover { transform: translateY(-6px); box-shadow: 0 30px 60px -28px rgba(0, 45, 112, .4); }
-.lp-plan.pop { border: 2px solid transparent; background: linear-gradient(#fff, #fff) padding-box, var(--l-grad) border-box; box-shadow: 0 20px 50px -15px rgba(200, 16, 176, .35), 0 4px 12px rgba(0, 26, 69, .06); transform: scale(1.02); }
-.lp-plan.pop:hover { transform: scale(1.02) translateY(-6px); box-shadow: 0 35px 75px -25px rgba(200, 16, 176, .55); }
-.lp-plan-tag { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); padding: 7px 20px; border-radius: 999px; background: var(--l-grad); color: #fff !important; font-size: 13px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 8px 24px -4px rgba(200, 16, 176, .75); z-index: 10; display: inline-flex; align-items: center; gap: 6px; }
+.lp-plan.popular { border: 2px solid transparent; background: linear-gradient(#fff, #fff) padding-box, var(--l-grad) border-box; box-shadow: 0 20px 50px -15px rgba(200, 16, 176, .35), 0 4px 12px rgba(0, 26, 69, .06); transform: scale(1.02); overflow: visible !important; }
+.lp-plan.popular:hover { transform: scale(1.02) translateY(-6px); box-shadow: 0 35px 75px -25px rgba(200, 16, 176, .55); }
+.lp-plan-tag { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); padding: 7px 20px; border-radius: 999px; background: var(--l-grad); color: #fff !important; font-size: 13px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 8px 24px -4px rgba(200, 16, 176, .75); z-index: 20; display: inline-flex; align-items: center; gap: 6px; }
 .lp-plan-tag[lang='si'] { font-size: 13.5px; letter-spacing: 0; }
 .lp-plan h3 { font-size: 22px; color: var(--l-navy); }
 .lp-plan-max { color: var(--l-ink-3); font-size: 14.5px; margin-top: 2px !important; }

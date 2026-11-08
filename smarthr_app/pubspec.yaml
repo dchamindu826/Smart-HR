@@ -1,0 +1,37 @@
+name: smarthr_app
+description: SmartHR by Lumi AI — the employee app (attendance, roster, leave, payslips).
+publish_to: 'none'
+version: 1.0.2+17
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+  geolocator: ^13.0.2
+  image_picker: ^1.1.2
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.3
+  connectivity_plus: ^6.1.0
+  provider: ^6.1.2
+  intl: ^0.19.0
+  path_provider: ^2.1.5
+  open_filex: ^4.5.0
+  url_launcher: ^6.3.1
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+  config:
+    enable-swift-package-manager: false

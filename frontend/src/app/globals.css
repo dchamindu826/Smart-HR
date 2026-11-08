@@ -490,6 +490,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
   padding: 10px 20px;
 }
 
+.org-tree-scaler {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: visible;
+  flex: none;
+}
+
 .org-company-node {
   display: inline-flex;
   align-items: center;
@@ -625,19 +633,52 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 
 .org-card {
-  width: 224px;
+  width: 202px;
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 12px;
-  padding: 13px 14px;
+  padding: 12px 13px;
   box-shadow: 0 2px 8px rgba(6, 32, 67, 0.05), 0 1px 2px rgba(6, 32, 67, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
   z-index: 2;
   text-align: left;
+}
+
+/* ── 2-column compact grid for large direct report teams ── */
+.org-tree-children.org-compact-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(195px, 205px));
+  gap: 14px 18px;
+  padding-top: 28px;
+  position: relative;
+  justify-content: center;
+}
+
+.org-tree-children.org-compact-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid var(--rule-2);
+  width: 0;
+  height: 28px;
+  transform: translateX(-50%);
+}
+
+.org-tree-children.org-compact-grid > li {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.org-tree-children.org-compact-grid > li::before,
+.org-tree-children.org-compact-grid > li::after {
+  display: none !important;
 }
 
 .org-card:hover {

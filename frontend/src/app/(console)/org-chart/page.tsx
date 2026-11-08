@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApi, useDebounced } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
@@ -73,7 +73,12 @@ export default function OrgChartPage() {
   const dq = useDebounced(q.trim().toLowerCase(), 200);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [view, setView] = useState<'diagram' | 'list'>('diagram');
+  const [layoutMode, setLayoutMode] = useState<'compact' | 'wide'>('compact');
   const [zoom, setZoom] = useState(1);
+  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const tree = useMemo(() => (data ? buildTree(data) : null), [data]);
 
@@ -118,8 +123,51 @@ export default function OrgChartPage() {
     setCollapsed(new Set());
   };
 
+  // Measure natural dimensions and fit to screen
+  const measureDimensions = useCallback(() => {
+    if (!canvasRef.current) return { width: 0, height: 0 };
+    const w = canvasRef.current.scrollWidth;
+    const h = canvasRef.current.scrollHeight;
+    setNaturalDimensions({ width: w, height: h });
+    return { width: w, height: h };
+  }, []);
+
+  const fitToScreen = useCallback(() => {
+    if (!viewportRef.current || !canvasRef.current) return;
+    const dims = measureDimensions();
+    const viewportWidth = viewportRef.current.clientWidth - 48; // padding margin
+    const contentWidth = dims.width || canvasRef.current.scrollWidth;
+
+    if (contentWidth > 0 && viewportWidth > 0) {
+      if (contentWidth <= viewportWidth) {
+        setZoom(1);
+      } else {
+        const scale = Math.max(0.4, Math.min(1, Math.floor((viewportWidth / contentWidth) * 100) / 100));
+        setZoom(scale);
+      }
+    }
+  }, [measureDimensions]);
+
+  // Auto-fit on tree load, layout switch or window resize
+  useEffect(() => {
+    if (tree && view === 'diagram') {
+      const timer = setTimeout(() => {
+        fitToScreen();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [tree, view, layoutMode, fitToScreen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (view === 'diagram') fitToScreen();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [view, fitToScreen]);
+
   const zoomIn = () => setZoom((z) => Math.min(1.4, Math.round((z + 0.1) * 10) / 10));
-  const zoomOut = () => setZoom((z) => Math.max(0.6, Math.round((z - 0.1) * 10) / 10));
+  const zoomOut = () => setZoom((z) => Math.max(0.4, Math.round((z - 0.1) * 10) / 10));
   const resetZoom = () => setZoom(1);
 
   const companyName = me?.tenant.name || 'Organization';
@@ -130,13 +178,39 @@ export default function OrgChartPage() {
         title="Org chart"
         sub="Hierarchical reporting tree showing who reports to whom. Active employees only."
         actions={
-          <div className="seg">
-            <button type="button" className={view === 'diagram' ? 'on' : ''} onClick={() => setView('diagram')}>
-              Tree diagram
-            </button>
-            <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>
-              Compact list
-            </button>
+          <div className="row tight">
+            <div className="seg">
+              <button
+                type="button"
+                className={view === 'diagram' && layoutMode === 'compact' ? 'on' : ''}
+                onClick={() => {
+                  setView('diagram');
+                  setLayoutMode('compact');
+                }}
+                title="Compact tree: arranges large teams in 2 columns to fit the screen without scrolling"
+              >
+                Compact tree
+              </button>
+              <button
+                type="button"
+                className={view === 'diagram' && layoutMode === 'wide' ? 'on' : ''}
+                onClick={() => {
+                  setView('diagram');
+                  setLayoutMode('wide');
+                }}
+                title="Wide tree: horizontal branching tree"
+              >
+                Wide tree
+              </button>
+              <button
+                type="button"
+                className={view === 'list' ? 'on' : ''}
+                onClick={() => setView('list')}
+                title="Compact list view"
+              >
+                List
+              </button>
+            </div>
           </div>
         }
       />
@@ -168,10 +242,13 @@ export default function OrgChartPage() {
                 <div className="row tight" style={{ marginLeft: 'auto' }}>
                   {view === 'diagram' && (
                     <div className="row tight" style={{ marginRight: 6 }}>
-                      <Button size="sm" onClick={zoomOut} title="Zoom out" disabled={zoom <= 0.6}>
+                      <Button size="sm" onClick={zoomOut} title="Zoom out" disabled={zoom <= 0.4}>
                         −
                       </Button>
-                      <Button size="sm" onClick={resetZoom} title="Reset zoom">
+                      <Button size="sm" onClick={fitToScreen} title="Fit entire org chart on screen">
+                        Fit screen
+                      </Button>
+                      <Button size="sm" onClick={resetZoom} title="Reset zoom to 100%">
                         {Math.round(zoom * 100)}%
                       </Button>
                       <Button size="sm" onClick={zoomIn} title="Zoom in" disabled={zoom >= 1.4}>
@@ -189,18 +266,48 @@ export default function OrgChartPage() {
               </div>
 
               {view === 'diagram' ? (
-                <div className="org-viewport">
-                  <div className="org-tree-canvas" style={{ transform: `scale(${zoom})` }}>
-                    {t.roots.length > 1 ? (
-                      <>
-                        <div className="org-company-node">
-                          <Icon name="building" size={17} />
-                          <span>{companyName}</span>
-                          <span className="chip sm" style={{ marginLeft: 6 }}>
-                            {t.byId.size} members
-                          </span>
-                        </div>
-                        <ul className="org-tree org-roots-branch">
+                <div ref={viewportRef} className="org-viewport">
+                  <div
+                    className="org-tree-scaler"
+                    style={{
+                      width: naturalDimensions.width > 0 ? naturalDimensions.width * zoom : 'auto',
+                      height: naturalDimensions.height > 0 ? naturalDimensions.height * zoom : 'auto',
+                      transition: 'width 0.15s ease-out, height 0.15s ease-out',
+                    }}
+                  >
+                    <div
+                      ref={canvasRef}
+                      className="org-tree-canvas"
+                      style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+                    >
+                      {t.roots.length > 1 ? (
+                        <>
+                          <div className="org-company-node">
+                            <Icon name="building" size={17} />
+                            <span>{companyName}</span>
+                            <span className="chip sm" style={{ marginLeft: 6 }}>
+                              {t.byId.size} members
+                            </span>
+                          </div>
+                          <ul className="org-tree org-roots-branch">
+                            {t.roots.map((r) => (
+                              <TreeNode
+                                key={r.id}
+                                person={r}
+                                tree={t}
+                                collapsed={collapsed}
+                                forcedOpen={forcedOpen}
+                                matches={matches}
+                                searching={!!dq}
+                                onToggle={toggle}
+                                isCompact={layoutMode === 'compact'}
+                                visited={new Set()}
+                              />
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <ul className="org-tree">
                           {t.roots.map((r) => (
                             <TreeNode
                               key={r.id}
@@ -211,28 +318,13 @@ export default function OrgChartPage() {
                               matches={matches}
                               searching={!!dq}
                               onToggle={toggle}
+                              isCompact={layoutMode === 'compact'}
                               visited={new Set()}
                             />
                           ))}
                         </ul>
-                      </>
-                    ) : (
-                      <ul className="org-tree">
-                        {t.roots.map((r) => (
-                          <TreeNode
-                            key={r.id}
-                            person={r}
-                            tree={t}
-                            collapsed={collapsed}
-                            forcedOpen={forcedOpen}
-                            matches={matches}
-                            searching={!!dq}
-                            onToggle={toggle}
-                            visited={new Set()}
-                          />
-                        ))}
-                      </ul>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -258,10 +350,10 @@ export default function OrgChartPage() {
 
               <div className="card-f" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="small muted">
-                  {t.byId.size} active employees · {t.roots.length} at top level
+                  {t.byId.size} active employees · {t.roots.length} at top level · {layoutMode === 'compact' ? 'Compact tree (fits on screen)' : 'Wide tree'}
                 </span>
                 <span className="small muted">
-                  Click name or avatar to open profile · Click reports button to expand/collapse
+                  Click name/avatar to open profile · Click Fit screen anytime to view all
                 </span>
               </div>
             </Card>
@@ -280,6 +372,7 @@ function TreeNode({
   matches,
   searching,
   onToggle,
+  isCompact,
   visited,
 }: {
   person: ChartPerson;
@@ -289,6 +382,7 @@ function TreeNode({
   matches: Set<string>;
   searching: boolean;
   onToggle: (id: string) => void;
+  isCompact: boolean;
   visited: Set<string>;
 }) {
   if (visited.has(person.id)) return null;
@@ -298,6 +392,9 @@ function TreeNode({
   const isDimmed = searching && !isMatch;
   const nextVisited = new Set(visited);
   nextVisited.add(person.id);
+
+  // Use compact 2-column grid when compact mode is active and team has > 2 direct reports
+  const useCompactGrid = isCompact && kids.length > 2;
 
   return (
     <li className="org-tree-node">
@@ -348,7 +445,7 @@ function TreeNode({
       </div>
 
       {open && kids.length > 0 && (
-        <ul className="org-tree-children">
+        <ul className={`org-tree-children ${useCompactGrid ? 'org-compact-grid' : ''}`}>
           {kids.map((kid) => (
             <TreeNode
               key={kid.id}
@@ -359,6 +456,7 @@ function TreeNode({
               matches={matches}
               searching={searching}
               onToggle={onToggle}
+              isCompact={isCompact}
               visited={nextVisited}
             />
           ))}

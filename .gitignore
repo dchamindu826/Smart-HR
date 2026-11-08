@@ -12,3 +12,4 @@ backend/run-tests.local.mjs
 frontend/tsconfig.check.json
 frontend/tsconfig.tsbuildinfo
 .DS_Store
+*.apk

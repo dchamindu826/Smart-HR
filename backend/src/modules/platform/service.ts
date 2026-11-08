@@ -625,6 +625,32 @@ export async function replaceTaxTable(p: PCtx, effectiveFrom: string, bands: { f
   await paudit(p, 'system.taxTable', { detail: { effectiveFrom, bands: sorted } });
 }
 
+export async function listPublicPlans() {
+  const plans = await db.plan.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: 'asc' },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      priceMonthly: true,
+      priceYearly: true,
+      maxEmployees: true,
+      sortOrder: true,
+    },
+  });
+  return plans.map((pl) => ({
+    code: pl.code,
+    name: pl.name,
+    description: pl.description,
+    priceMonthly: pl.priceMonthly.toFixed(0),
+    priceYearly: pl.priceYearly ? pl.priceYearly.toFixed(0) : null,
+    maxEmployees: pl.maxEmployees,
+    sortOrder: pl.sortOrder,
+  }));
+}
+
 export async function platformAuditList(q: { tenantId?: string; adminId?: string; page: number; pageSize: number }) {
   const where: Prisma.PlatformAuditWhereInput = { ...(q.tenantId ? { tenantId: q.tenantId } : {}), ...(q.adminId ? { adminId: q.adminId } : {}) };
   const [rows, total] = await Promise.all([

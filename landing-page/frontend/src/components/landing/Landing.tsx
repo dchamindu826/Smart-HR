@@ -140,12 +140,57 @@ function PhoneMock() {
 
 // ─── the page ──────────────────────────────────────────────────
 
-const FAQ: { q: string; a: string }[] = [
-  { q: 'Do my staff need to buy anything?', a: 'No. Staff use the free SmartHR app on their own iPhone or Android phone. You can also connect fingerprint or face terminals on the Complete plan.' },
-  { q: 'Is EPF, ETF and APIT included?', a: 'Yes, in every plan. SmartHR works out EPF (8% employee, 12% employer), ETF (3%) and APIT each month and prepares the return files and the bank transfer file.' },
-  { q: 'How long does it take to start?', a: 'Most small companies are running within a few days. Send us your staff list in Excel and we help you import it, set up shifts and leave, and train your HR team.' },
-  { q: 'Is our data safe?', a: 'Data is encrypted in transit, passwords are never stored in readable form, and every change to payroll and attendance is logged. Each company only ever sees its own data.' },
-  { q: 'Can I try it first?', a: 'Yes. Message us on WhatsApp and we will show you a live demo with sample data, then set up a trial for your company.' },
+const FAQ: { q: Record<Lang, string>; a: Record<Lang, string> }[] = [
+  {
+    q: {
+      en: 'Do my staff need to buy anything?',
+      si: 'මගේ සේවකයින් කිසිවක් මිලදී ගත යුතුද?',
+    },
+    a: {
+      en: 'No. Staff use the free SmartHR app on their own iPhone or Android phone. You can also connect fingerprint or face terminals on the Complete plan.',
+      si: 'නැත. සේවකයින් ඔවුන්ගේම iPhone හෝ Android දුරකථනයෙන් නොමිලේ SmartHR ඇප් එක භාවිතා කරයි. Complete සැලසුමෙන් fingerprint හෝ face terminals ද සම්බන්ධ කළ හැක.',
+    },
+  },
+  {
+    q: {
+      en: 'Is EPF, ETF and APIT included?',
+      si: 'EPF, ETF සහ APIT ඇතුළත්ද?',
+    },
+    a: {
+      en: 'Yes, in every plan. SmartHR works out EPF (8% employee, 12% employer), ETF (3%) and APIT each month and prepares the return files and the bank transfer file.',
+      si: 'ඔව්, සෑම සැලසුමකම ඇතුළත් වේ. SmartHR මඟින් සෑම මසකම EPF (8% සේවක, 12% සේවායෝජක), ETF (3%) සහ APIT ගණනය කර, අදාළ වාර්තා (returns) සහ බැංකු ගෙවීම් ලිපිගොනු (bank transfer files) සකස් කර දෙයි.',
+    },
+  },
+  {
+    q: {
+      en: 'How long does it take to start?',
+      si: 'ආරම්භ කිරීමට කොපමණ කාලයක් ගතවේද?',
+    },
+    a: {
+      en: 'Most small companies are running within a few days. Send us your staff list in Excel and we help you import it, set up shifts and leave, and train your HR team.',
+      si: 'බොහෝ ආයතන දින කිහිපයක් ඇතුළත ක්‍රියාත්මක වේ. ඔබේ සේවක ලැයිස්තුව Excel මඟින් අපට ලබා දෙන්න. අපි එය import කර, shifts, leave සකසා, ඔබේ HR කණ්ඩායම පුහුණු කිරීමට සහාය දෙන්නෙමු.',
+    },
+  },
+  {
+    q: {
+      en: 'Is our data safe?',
+      si: 'අපගේ දත්ත සුරක්ෂිතද?',
+    },
+    a: {
+      en: 'Data is encrypted in transit, passwords are never stored in readable form, and every change to payroll and attendance is logged. Each company only ever sees its own data.',
+      si: 'සියලුම දත්ත HTTPS මඟින් encrypt කර ඇත. මුරපද කිසි විටෙකත් කියවිය හැකි ආකාරයෙන් ගබඩා නොකෙරේ. වැටුප් හා පැමිණීම් වල සෑම වෙනස්කමක්ම log සටහන් වේ. සෑම ආයතනයකටම දැකිය හැක්කේ තම ආයතනයේ දත්ත පමණි.',
+    },
+  },
+  {
+    q: {
+      en: 'Can I try it first?',
+      si: 'පළමුව අත්හදා බැලිය හැකිද?',
+    },
+    a: {
+      en: 'Yes. Message us on WhatsApp and we will show you a live demo with sample data, then set up a trial for your company.',
+      si: 'ඔව්. WhatsApp මඟින් අප අමතන්න. අපි sample දත්ත සමඟ live demo එකක් පෙන්වා, ඔබේ ආයතනයට නොමිලේ trial එකක් සකසා දෙන්නෙමු.',
+    },
+  },
 ];
 
 export function Landing() {
@@ -153,8 +198,33 @@ export function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState<number | null>(0);
+  const [currentPlans, setCurrentPlans] = useState(plans);
   const spot = useRef<HTMLDivElement>(null);
   useReveal(lang);
+
+  // Fetch active plans from the admin panel to keep prices in sync
+  useEffect(() => {
+    fetch('/api/v1/platform/plans/public')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { code: string; name: string; priceMonthly: string; priceYearly: string | null; maxEmployees: number }[] | null) => {
+        if (!data || !Array.isArray(data)) return;
+        setCurrentPlans((prev) =>
+          prev.map((p) => {
+            const apiMatch = data.find((d) => d.code.toLowerCase() === p.name.toLowerCase() || d.name.toLowerCase() === p.name.toLowerCase());
+            if (!apiMatch) return p;
+            const pm = Number(apiMatch.priceMonthly);
+            const py = apiMatch.priceYearly ? Number(apiMatch.priceYearly) : pm * 10;
+            return {
+              ...p,
+              max: apiMatch.maxEmployees || p.max,
+              price: !isNaN(pm) && pm > 0 ? pm.toLocaleString('en-LK') : p.price,
+              year: !isNaN(py) && py > 0 ? py.toLocaleString('en-LK') : p.year,
+            };
+          })
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     try {
@@ -372,15 +442,15 @@ export function Landing() {
               <LangSwitch lang={lang} setLang={setLang} />
             </div>
             <div className="lp-plans" key={lang}>
-              {plans.map((p, i) => (
+              {currentPlans.map((p, i) => (
                 <div key={p.name} className={`lp-plan${p.popular ? ' pop' : ''}`} data-reveal style={{ ['--d' as string]: `${i * 90}ms` }}>
-                  {p.popular && <span className="lp-plan-tag" lang={lang}>{plansHead.popular[lang]}</span>}
+                  {p.popular && <span className="lp-plan-tag" lang={lang}>★ {plansHead.popular[lang]}</span>}
                   <h3>{p.name}</h3>
                   <p className="lp-plan-max" lang={lang}>{fill(plansHead.employees[lang], { n: p.max })}</p>
                   <div className="lp-price"><small>Rs</small>{p.price}<span lang={lang}>{plansHead.month[lang]}</span></div>
                   <p className="lp-plan-year" lang={lang}>{fill(plansHead.year[lang], { y: p.year })}</p>
                   <ul>{p.items.map((it) => <li key={it.en} lang={lang}>{it[lang]}</li>)}</ul>
-                  <a href={whatsappLink(`Hi Lumi AI, I am interested in the SmartHR ${p.name} plan.`)} target="_blank" rel="noopener noreferrer" className={`lp-btn ${p.popular ? '' : 'ghost'} block`} lang={lang}>
+                  <a href={whatsappLink(`Hi Lumi Automation, I am interested in the SmartHR ${p.name} plan.`)} target="_blank" rel="noopener noreferrer" className={`lp-btn ${p.popular ? '' : 'ghost'} block`} lang={lang}>
                     {plansHead.demo[lang]}
                   </a>
                 </div>
@@ -411,17 +481,21 @@ export function Landing() {
           <div className="lp-wrap lp-faq-wrap">
             <div className="lp-head left" data-reveal>
               <span className="lp-kicker">FAQ</span>
-              <h2>Questions we hear a lot</h2>
-              <p>Anything else? Ask us on WhatsApp — we reply on Sri Lankan working days.</p>
+              <h2 lang={lang}>{lang === 'si' ? 'නිතර අසන ප්‍රශ්න' : 'Questions we hear a lot'}</h2>
+              <p lang={lang}>
+                {lang === 'si'
+                  ? 'වෙනත් ප්‍රශ්න තිබේද? WhatsApp මඟින් අපෙන් විමසන්න — වැඩකරන දිනවලදී අප පිළිතුරු ලබා දෙන්නෙමු.'
+                  : 'Anything else? Ask us on WhatsApp — we reply on Sri Lankan working days.'}
+              </p>
             </div>
-            <div className="lp-faq">
+            <div className="lp-faq" data-reveal>
               {FAQ.map((f, i) => (
-                <div key={f.q} className={`lp-q${open === i ? ' open' : ''}`} data-reveal style={{ ['--d' as string]: `${i * 60}ms` }}>
-                  <button onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
-                    {f.q}
+                <div key={f.q.en} className={`lp-q${open === i ? ' open' : ''}`}>
+                  <button type="button" onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+                    <span lang={lang}>{f.q[lang]}</span>
                     <span className="pm" aria-hidden />
                   </button>
-                  <div className="lp-a"><div><p>{f.a}</p></div></div>
+                  <div className="lp-a"><div><p lang={lang}>{f.a[lang]}</p></div></div>
                 </div>
               ))}
             </div>

@@ -42,6 +42,9 @@ platformRouter.post('/auth/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Public endpoint for landing page pricing
+platformRouter.get('/plans/public', async (_req, res) => res.json(await svc.listPublicPlans()));
+
 platformRouter.use(requirePlatform);
 
 platformRouter.get('/me', (req, res) => {

@@ -557,25 +557,55 @@ export async function publishedRosterDays(
 
 /** The employee's own published roster. */
 export async function myRoster(ctx: Ctx, from: string, to: string) {
-  if (!ctx.employeeId) return { days: [] };
-  const map = await publishedRosterDays(ctx.tenantId, [ctx.employeeId], from, to, rosterRules(ctx.settings));
-  const holidays = await holidayMap(ctx.tenantId, from, to);
-  const patterns = new Map((await db.shiftPattern.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, name: true, color: true } })).map((p) => [p.id, p]));
+  if (!ctx.employeeId) return { days: [], defaultShift: null };
+  const [map, holidays, patterns, leaves, draftRows, emp] = await Promise.all([
+    publishedRosterDays(ctx.tenantId, [ctx.employeeId], from, to, rosterRules(ctx.settings)),
+    holidayMap(ctx.tenantId, from, to),
+    db.shiftPattern.findMany({ where: { tenantId: ctx.tenantId }, select: { id: true, code: true, name: true, color: true, segments: true, totalMinutes: true } }),
+    db.leaveRequest.findMany({
+      where: { tenantId: ctx.tenantId, employeeId: ctx.employeeId, status: 'APPROVED', fromDate: { lte: dbDate(to) }, toDate: { gte: dbDate(from) } },
+      include: { leaveType: { select: { name: true, color: true } } },
+    }),
+    db.rosterDay.findMany({
+      where: { tenantId: ctx.tenantId, employeeId: ctx.employeeId, date: { gte: dbDate(from), lte: dbDate(to) }, week: { status: { in: ['DRAFT', 'SUBMITTED', 'APPROVED'] } } },
+      include: { week: { select: { status: true, revision: true } } },
+      orderBy: { week: { revision: 'desc' } },
+    }),
+    db.employee.findUnique({
+      where: { id: ctx.employeeId },
+      include: {
+        defaultShiftPattern: { select: { id: true, code: true, name: true, color: true, segments: true, totalMinutes: true } },
+      },
+    }),
+  ]);
+
+  const patternMap = new Map(patterns.map((p) => [p.id, p]));
+  const draftMap = new Map<string, typeof draftRows[0]>();
+  for (const row of draftRows) {
+    const k = fromDbDate(row.date);
+    if (!draftMap.has(k)) draftMap.set(k, row);
+  }
+
   const days = [];
   for (let d = from; d <= to; d = addDays(d, 1)) {
     const r = map.get(`${ctx.employeeId}|${d}`);
+    const dr = !r ? draftMap.get(d) : null;
+    const lv = leaves.find((l) => fromDbDate(l.fromDate) <= d && fromDbDate(l.toDate) >= d);
+    const drSegs = (dr?.segments as unknown as RosterSegment[]) ?? [];
     days.push({
       date: d,
       rostered: !!r,
-      isOff: r ? r.isOff || r.segments.length === 0 : null,
-      segments: r?.segments ?? [],
-      paidMinutes: r?.paidMinutes ?? 0,
-      plannedOtMinutes: r?.plannedOtMinutes ?? 0,
-      shift: r?.shiftPatternId ? patterns.get(r.shiftPatternId) ?? null : null,
+      isOff: r ? r.isOff || r.segments.length === 0 : (dr ? dr.isOff || drSegs.length === 0 : null),
+      segments: r?.segments ?? drSegs,
+      paidMinutes: r?.paidMinutes ?? dr?.paidMinutes ?? 0,
+      plannedOtMinutes: r?.plannedOtMinutes ?? dr?.plannedOtMinutes ?? 0,
+      shift: (r?.shiftPatternId ? patternMap.get(r.shiftPatternId) : (dr?.shiftPatternId ? patternMap.get(dr.shiftPatternId) : null)) ?? null,
       holiday: holidays.get(d) ?? null,
+      leave: lv ? { name: lv.leaveType.name, color: lv.leaveType.color } : null,
+      status: r ? 'PUBLISHED' : (dr ? dr.week.status : null),
     });
   }
-  return { days };
+  return { days, defaultShift: emp?.defaultShiftPattern ?? null };
 }
 
 export { mondayOf };

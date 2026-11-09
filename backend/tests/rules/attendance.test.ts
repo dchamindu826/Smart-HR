@@ -191,6 +191,16 @@ describe('checkLocation', () => {
   it('office punch without GPS is allowed when location is switched off', () => {
     expect(checkLocation({ mode: 'OFFICE' }, { ...policy, requireLocation: false }, fences, null).ok).toBe(true);
   });
+  it('allows mark-out without GPS even in remote mode or when location is required, flagging NO_OUT_LOCATION', () => {
+    const r = checkLocation({ kind: 'OUT', mode: 'REMOTE' }, policy, fences, null);
+    expect(r.ok).toBe(true);
+    expect(r.flags).toContain('NO_OUT_LOCATION');
+  });
+  it('allows mark-out with poor GPS accuracy, flagging POOR_ACCURACY', () => {
+    const r = checkLocation({ kind: 'OUT', mode: 'REMOTE', lat: 6.9, lng: 79.8, accuracyM: 500 }, policy, fences, null);
+    expect(r.ok).toBe(true);
+    expect(r.flags).toContain('POOR_ACCURACY');
+  });
 });
 
 describe('todaySoFar', () => {

@@ -45,11 +45,13 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
   final _dateFmt = DateFormat('EEEE, d MMMM yyyy');
 
   bool get _isIn => widget.kind == 'IN';
-  bool get _requiresLocation => _isIn && (widget.me.requireLocation || _mode == 'REMOTE');
+  bool get _requiresLocation => widget.me.requireLocation || _mode == 'REMOTE';
   bool get _requiresFace => _isIn && widget.me.requireFace;
 
+  bool _isSubmitting = false;
+
   bool get _canConfirm {
-        if (!_isIn) return true;
+    if (!_isIn) return !_isSubmitting;
     if (_requiresLocation && _fix == null) return false;
     if (_requiresFace && _facePhoto == null) return false;
     return true;
@@ -59,7 +61,7 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
-    if (_requiresLocation) {
+    if (_requiresLocation || !_isIn) {
       _fetchLocation();
     }
   }
@@ -116,7 +118,17 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
     }
   }
 
-  void _onConfirm() {
+  Future<void> _onConfirm() async {
+    if (_isSubmitting) return;
+    if (!_isIn && _locLoading) {
+      setState(() => _isSubmitting = true);
+      int waitedMs = 0;
+      while (_locLoading && waitedMs < 2500) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        waitedMs += 100;
+      }
+    }
+    if (!mounted) return;
     Navigator.pop(context, {
       'confirmed': true,
       'mode': _mode,
@@ -304,6 +316,59 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                         ],
                       ),
                     ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Location capture status for mark-out
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: dark ? const Color(0xFF162032) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: dark ? const Color(0xFF1E293B) : const Color(0x0C000000)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _fix != null ? Icons.location_on_rounded : Icons.location_searching_rounded,
+                      size: 20,
+                      color: _fix != null ? Brand.ok : (_locLoading ? Brand.blue : Brand.inkMuted),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _locLoading
+                                ? 'Acquiring GPS location...'
+                                : (_fix != null
+                                    ? 'GPS recorded (±${_fix!.accuracy.round()}m)'
+                                    : 'GPS location optional for mark out'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _fix != null ? Brand.ok : (dark ? Colors.white70 : Brand.inkMuted),
+                            ),
+                          ),
+                          if (_locError != null && _fix == null)
+                            Text(
+                              'Could not read GPS. Mark-out will still be recorded.',
+                              style: TextStyle(fontSize: 11.5, color: dark ? const Color(0xFF94A3B8) : Brand.inkMuted),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (_locLoading)
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    else if (_fix == null && _requiresLocation)
+                      IconButton(
+                        onPressed: _fetchLocation,
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        tooltip: 'Retry GPS',
+                      ),
                   ],
                 ),
               ),
@@ -682,20 +747,28 @@ class _PunchConfirmModalState extends State<PunchConfirmModal> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _isIn ? Icons.check_circle_rounded : Icons.logout_rounded,
-                        color: _canConfirm ? Colors.white : (dark ? Colors.white30 : Colors.black26),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isIn ? 'Confirm & Mark In' : 'Confirm & Mark Out',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                      if (_isSubmitting)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      else ...[
+                        Icon(
+                          _isIn ? Icons.check_circle_rounded : Icons.logout_rounded,
                           color: _canConfirm ? Colors.white : (dark ? Colors.white30 : Colors.black26),
-                          letterSpacing: -.01,
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isIn ? 'Confirm & Mark In' : 'Confirm & Mark Out',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: _canConfirm ? Colors.white : (dark ? Colors.white30 : Colors.black26),
+                            letterSpacing: -.01,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -107,12 +107,18 @@ export async function punch(ctx: Ctx, input: PunchInput, source: 'APP' | 'WEB' =
   const fences = branches.map((b) => ({ id: b.id, name: b.name, lat: b.lat!, lng: b.lng!, radiusM: b.radiusM }));
   const policy = locationPolicy(s, e);
   const loc = checkLocation(
-    { mode: p.mode, lat: p.lat, lng: p.lng, accuracyM: p.accuracyM, mocked: p.mocked },
+    { kind: p.kind, mode: p.mode, lat: p.lat, lng: p.lng, accuracyM: p.accuracyM, mocked: p.mocked },
     p.kind === 'OUT' ? { ...policy, officeMustBeInFence: false, allowRemote: true } : policy,
     fences,
     e.remoteLat !== null && e.remoteLng !== null ? { lat: e.remoteLat, lng: e.remoteLng } : null,
   );
-  if (!loc.ok) return reject(loc.reason!, loc.flags);
+  if (!loc.ok) {
+    if (p.kind === 'OUT') {
+      loc.flags.push('NO_OUT_LOCATION');
+    } else {
+      return reject(loc.reason!, loc.flags);
+    }
+  }
   const plan = planPunch(open ? { id: open.id, startAt: open.startAt, mode: open.mode } : null, p, now);
   if (plan.action === 'REJECT') return reject(plan.reason);
 

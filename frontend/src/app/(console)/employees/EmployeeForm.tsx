@@ -485,7 +485,7 @@ export function EmployeeForm({ id }: { id?: string }) {
             <Field label="May work remotely">
               <Select value={f.allowRemote} onChange={(e) => set('allowRemote', e.target.value as Tri)} placeholder="Company setting" options={TRI_OPTIONS} />
             </Field>
-            <Field label="Location needed to mark in">
+            <Field label="Location needed for attendance">
               <Select value={f.requireLocation} onChange={(e) => set('requireLocation', e.target.value as Tri)} placeholder="Company setting" options={TRI_OPTIONS} />
             </Field>
             <Field label="Face check" hint={has('face') ? undefined : 'Needs the Complete plan.'}>

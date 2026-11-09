@@ -73,6 +73,7 @@ export interface LocationPolicy {
 }
 
 export interface LocationInput {
+  kind?: 'IN' | 'OUT';
   mode: Mode;
   lat?: number | null;
   lng?: number | null;
@@ -98,18 +99,26 @@ export function checkLocation(
   const has = validLatLng(input.lat, input.lng);
   if (input.mocked) flags.push('MOCK_LOCATION');
 
+  const isOut = input.kind === 'OUT';
+
   if (input.mode === 'REMOTE' && !policy.allowRemote) {
     return { ok: false, reason: 'Remote work is not allowed for you. Mark in at the office.', flags };
   }
-  // GPS is mandatory for remote work, whatever the company setting.
+  // GPS is mandatory for remote mark-in, whatever the company setting. Mark-out is never trapped.
   if (input.mode === 'REMOTE' && !has) {
+    if (isOut) {
+      return { ok: true, branchId: null, distanceHomeM: null, flags: [...flags, 'NO_OUT_LOCATION'] };
+    }
     return { ok: false, reason: 'Turn on location. Your location is required to mark in remotely.', flags };
   }
   if (!has) {
-    if (policy.requireLocation) return { ok: false, reason: 'Turn on location to mark attendance.', flags };
-    return { ok: true, branchId: null, distanceHomeM: null, flags };
+    if (policy.requireLocation && !isOut) return { ok: false, reason: 'Turn on location to mark attendance.', flags };
+    return { ok: true, branchId: null, distanceHomeM: null, flags: isOut && policy.requireLocation ? [...flags, 'NO_OUT_LOCATION'] : flags };
   }
   if (input.accuracyM != null && input.accuracyM > policy.maxAccuracyM) {
+    if (isOut) {
+      return { ok: true, branchId: null, distanceHomeM: null, flags: [...flags, 'POOR_ACCURACY'] };
+    }
     return { ok: false, reason: `Location is not accurate enough (±${Math.round(input.accuracyM)} m). Move to an open area and try again.`, flags };
   }
   const lat = input.lat as number;
@@ -118,7 +127,7 @@ export function checkLocation(
   if (input.mode === 'OFFICE') {
     const hit = insideFence(lat, lng, input.accuracyM, fences);
     if (!hit) {
-      if (policy.officeMustBeInFence && fences.length > 0) {
+      if (policy.officeMustBeInFence && fences.length > 0 && !isOut) {
         return { ok: false, reason: 'You are not at an office location. Mark in when you reach the office, or choose remote work.', flags };
       }
       return { ok: true, branchId: null, distanceHomeM: null, flags: [...flags, 'OUTSIDE_FENCE'] };

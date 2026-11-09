@@ -249,7 +249,7 @@ export default function RulesPage() {
             </Card>
 
             <Card title="Attendance capture" sub="Location and face check">
-              <Row title="Location needed to mark in" help="The app records where the employee is when they mark in and out.">
+              <Row title="Location needed for attendance" help="The app records where the employee is when they mark in and out.">
                 {tog('requireLocation')}
               </Row>
               <Row

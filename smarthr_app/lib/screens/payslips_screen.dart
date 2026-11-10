@@ -142,6 +142,14 @@ class _PayslipScreenState extends State<PayslipScreen> {
             ),
             const SizedBox(height: 10),
             Text('Days paid ${p['workedDays']} · No-pay days ${p['noPayDays']} · Overtime ${dur(p['otMinutes'] as num?)}', style: TextStyle(color: c.onSurfaceVariant, fontSize: 13)),
+            if (((p['lateDays'] as num?) ?? 0) > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Late ${p['lateDays']} day${p['lateDays'] == 1 ? '' : 's'} this month · ${dur(p['lateMinutes'] as num?)} in total',
+                  style: const TextStyle(color: Color(0xFFB45309), fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
             const SizedBox(height: 18),
             FilledButton.icon(onPressed: _downloading ? null : _pdf, icon: const Icon(Icons.picture_as_pdf_outlined), label: Text(_downloading ? 'Opening…' : 'Open PDF')),
           ]);

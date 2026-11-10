@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../core/api.dart';
+import '../core/live.dart';
 import '../core/session.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
@@ -21,7 +22,11 @@ import 'simple_screens.dart';
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
-  void _go(BuildContext context, Widget w) => Navigator.push(context, MaterialPageRoute(builder: (_) => w));
+  /// Opens a screen; unread counts are refreshed when the user comes back.
+  Future<void> _go(BuildContext context, Widget w) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => w));
+    await Live.refreshBadges();
+  }
 
   Future<void> _deleteAccount(BuildContext context) async {
     final ok = await confirm(
@@ -57,10 +62,26 @@ class MoreScreen extends StatelessWidget {
     final me = s.me!;
     final c = Theme.of(context).colorScheme;
     final emp = me.employee;
-    Widget item(IconData icon, String text, VoidCallback onTap, {Color? color}) => ListTile(
+    Widget item(IconData icon, String text, VoidCallback onTap, {Color? color, int Function(Badges b)? count}) => ListTile(
           leading: Icon(icon, color: color),
           title: Text(text, style: TextStyle(color: color)),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: count == null
+              ? const Icon(Icons.chevron_right)
+              : ValueListenableBuilder<Badges>(
+                  valueListenable: Live.badges,
+                  builder: (context, b, _) {
+                    final n = count(b);
+                    return Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (n > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(gradient: Brand.gradient, borderRadius: BorderRadius.circular(12)),
+                          child: Text(n > 99 ? '99+' : '$n', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                        ),
+                      const Icon(Icons.chevron_right),
+                    ]);
+                  },
+                ),
           onTap: onTap,
         );
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -170,14 +191,14 @@ class MoreScreen extends StatelessWidget {
                     item(Icons.more_time_rounded, 'My overtime', () => _go(context, const OvertimeScreen())),
                     if (me.has('messaging')) ...[
                       const Divider(height: 1, indent: 56),
-                      item(Icons.chat_bubble_outline_rounded, 'Messages', () => _go(context, const MessagesScreen())),
+                      item(Icons.chat_bubble_outline_rounded, 'Messages', () => _go(context, const MessagesScreen()), count: (b) => b.messages),
                     ],
                     const Divider(height: 1, indent: 56),
                     item(Icons.cake_outlined, 'Birthdays this week', () => _go(context, const BirthdaysScreen())),
                     const Divider(height: 1, indent: 56),
-                    item(Icons.campaign_outlined, 'Announcements', () => _go(context, const AnnouncementsScreen())),
+                    item(Icons.campaign_outlined, 'Announcements', () => _go(context, const AnnouncementsScreen()), count: (b) => b.announcements),
                     const Divider(height: 1, indent: 56),
-                    item(Icons.notifications_none_rounded, 'Notifications', () => _go(context, const NotificationsScreen())),
+                    item(Icons.notifications_none_rounded, 'Notifications', () => _go(context, const NotificationsScreen()), count: (b) => b.notifications),
                     if (me.has('assets')) ...[
                       const Divider(height: 1, indent: 56),
                       item(Icons.devices_other_rounded, 'My assets', () => _go(context, const AssetsScreen())),

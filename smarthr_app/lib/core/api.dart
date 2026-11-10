@@ -124,12 +124,20 @@ class Api {
   Future<dynamic> upload(String path, String filePath, {String? filename}) async {
     try {
       final form = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: filename),
+        'file': await MultipartFile.fromFile(filePath, filename: filename, contentType: _imageType(filename ?? filePath)),
       });
       return (await dio.post(path, data: form)).data;
     } catch (e) {
       throw ApiError.from(e);
     }
+  }
+
+  /// Without this, Dio sends "application/octet-stream" and the server refuses the photo.
+  static DioMediaType _imageType(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.png')) return DioMediaType('image', 'png');
+    if (n.endsWith('.webp')) return DioMediaType('image', 'webp');
+    return DioMediaType('image', 'jpeg');
   }
 
   Future<Uint8List?> bytes(String path) async {

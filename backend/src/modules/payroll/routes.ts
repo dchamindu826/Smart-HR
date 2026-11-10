@@ -80,6 +80,7 @@ payrollRouter.get('/runs/:id/register.xlsx', async (req, res) => {
       { header: 'EPF 8%', key: 'epf8', money: true, width: 11 }, { header: 'APIT', key: 'apit', money: true, width: 11 }, { header: 'Total deductions', key: 'deductions', money: true, width: 14 },
       { header: 'Net', key: 'net', money: true, width: 13 }, { header: 'EPF 12%', key: 'epf12', money: true, width: 11 }, { header: 'ETF 3%', key: 'etf3', money: true, width: 11 },
       { header: 'No-pay days', key: 'noPayDays', width: 10 }, { header: 'OT hours', key: 'otHours', width: 9 },
+      { header: 'Late days', key: 'lateDays', width: 9 }, { header: 'Late minutes', key: 'lateMinutes', width: 11 },
     ],
     rows,
     `Payroll register — ${run.period} (${run.status})`,

@@ -48,6 +48,8 @@ interface RunSlip {
   apit: string;
   otMinutes: number;
   noPayDays: number;
+  lateDays: number;
+  lateMinutes: number;
   warnings: string[];
   snapshot: Snapshot;
 }
@@ -366,6 +368,7 @@ export default function PayrollRunPage() {
                           <th className="num">APIT</th>
                           <th className="num">No-pay days</th>
                           <th className="num">OT</th>
+                          <th className="num" title="Days marked in after the rostered start plus the grace period">Late</th>
                           <th />
                         </tr>
                       </thead>
@@ -387,6 +390,7 @@ export default function PayrollRunPage() {
                             <td className="num">{money(p.apit)}</td>
                             <td className="num">{p.noPayDays || '—'}</td>
                             <td className="num">{p.otMinutes ? dur(p.otMinutes) : '—'}</td>
+                            <td className="num">{p.lateDays ? <span className="warn-t" title={`${dur(p.lateMinutes)} in total`}>{p.lateDays} d · {dur(p.lateMinutes)}</span> : '—'}</td>
                             <td>
                               {p.warnings.length > 0 && (
                                 <Chip tone="warn" title={p.warnings.join('\n')}>
@@ -398,7 +402,7 @@ export default function PayrollRunPage() {
                         ))}
                         {slips.length === 0 && (
                           <tr>
-                            <td colSpan={12} className="center muted">
+                            <td colSpan={13} className="center muted">
                               No payslips match “{q}”.
                             </td>
                           </tr>
@@ -414,6 +418,7 @@ export default function PayrollRunPage() {
                             <td className="num">{money(t.net)}</td>
                             <td className="num">{money(t.epfEmployee)}</td>
                             <td className="num">{money(t.apit)}</td>
+                            <td className="num" />
                             <td className="num" />
                             <td className="num" />
                             <td />

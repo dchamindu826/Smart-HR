@@ -6,6 +6,7 @@ import { upload, streamFile } from '../../core/files.js';
 import { badRequest } from '../../core/errors.js';
 import { colomboDate } from '../../lib/time.js';
 import * as emp from '../employees/service.js';
+import * as comms from '../comms/service.js';
 import * as svc from './service.js';
 
 export const authRouter = Router();
@@ -110,4 +111,9 @@ meRouter.patch('/preferences', async (req, res) => {
 });
 meRouter.get('/birthdays', async (req, res) => {
   res.json(await emp.birthdays(ctxOf(req), colomboDate(new Date()), 7));
+});
+
+/** Unread counts for the app (More tab badge, menu counts). */
+meRouter.get('/badges', async (req, res) => {
+  res.json(await comms.badges(ctxOf(req)));
 });

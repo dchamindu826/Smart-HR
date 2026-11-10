@@ -195,8 +195,19 @@ export async function today(ctx: Ctx) {
   const totals = todaySoFar(date, sessions, now, attendanceRules(s));
   const open = sessions.find((x) => !x.endAt) ?? null;
   const roster = rosterMap.get(`${e.id}|${date}`) ?? null;
+  // Late: first mark-in after the rostered start + grace (same rule as the day close).
+  const rosterStart = roster && !roster.isOff && roster.segments.length ? Math.min(...roster.segments.map((x) => x.start)) : null;
+  const firstIn = sessions.find((x) => colomboDate(x.startAt) === date)?.startAt ?? null;
+  let lateMinutes = 0;
+  if (rosterStart !== null && firstIn) {
+    const inMin = Math.round((firstIn.getTime() - colomboInstant(date, 0).getTime()) / 60_000);
+    if (inMin - rosterStart > s.graceMinutes) lateMinutes = inMin - rosterStart;
+  }
   return {
     date,
+    rosterStart,
+    graceMinutes: s.graceMinutes,
+    lateMinutes,
     serverTime: now.toISOString(),
     state: open ? 'IN' : 'OUT',
     openSession: open,

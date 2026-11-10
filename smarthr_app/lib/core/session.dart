@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../widgets/avatar.dart';
+import 'live.dart';
 import 'api.dart';
 import 'push.dart';
 
@@ -116,6 +117,7 @@ class Session extends ChangeNotifier {
 
   void _signedOut() {
     PhotoCache.bump();
+    Live.reset();
     me = null;
     state = AuthState.signedOut;
     notifyListeners();

@@ -409,6 +409,20 @@ export async function deleteRun(ctx: Ctx, id: string) {
   await writeAudit(db, ctx, 'payroll.delete', 'PayrollRun', id, { period: run.period, status: run.status }, null);
 }
 
+/** Late days and minutes per employee in a pay period, from the closed attendance days. */
+export async function lateness(tenantId: string, employeeIds: string[], periodStart: Date, periodEnd: Date) {
+  const out = new Map<string, { lateDays: number; lateMinutes: number }>();
+  if (!employeeIds.length) return out;
+  const rows = await db.attendanceDay.groupBy({
+    by: ['employeeId'],
+    where: { tenantId, employeeId: { in: employeeIds }, date: { gte: periodStart, lte: periodEnd }, lateMinutes: { gt: 0 } },
+    _count: true,
+    _sum: { lateMinutes: true },
+  });
+  for (const r of rows) out.set(r.employeeId, { lateDays: r._count, lateMinutes: r._sum.lateMinutes ?? 0 });
+  return out;
+}
+
 export async function getRun(ctx: Ctx, id: string) {
   assertCan(ctx, 'payroll.view');
   const run = await getRunOrThrow(ctx, id);
@@ -417,6 +431,7 @@ export async function getRun(ctx: Ctx, id: string) {
     select: { id: true, employeeId: true, basic: true, gross: true, totalDeductions: true, net: true, epfEmployee: true, epfEmployer: true, etf: true, apit: true, otMinutes: true, noPayDays: true, warnings: true, snapshot: true },
     orderBy: { employee: { empNo: 'asc' } },
   });
+  const late = await lateness(ctx.tenantId, slips.map((s) => s.employeeId), run.periodStart, run.periodEnd);
   return {
     ...run,
     periodStart: fromDbDate(run.periodStart),
@@ -425,6 +440,8 @@ export async function getRun(ctx: Ctx, id: string) {
       ...s,
       basic: dec(s.basic), gross: dec(s.gross), totalDeductions: dec(s.totalDeductions), net: dec(s.net),
       epfEmployee: dec(s.epfEmployee), epfEmployer: dec(s.epfEmployer), etf: dec(s.etf), apit: dec(s.apit), noPayDays: Number(s.noPayDays),
+      lateDays: late.get(s.employeeId)?.lateDays ?? 0,
+      lateMinutes: late.get(s.employeeId)?.lateMinutes ?? 0,
     })),
   };
 }
@@ -440,6 +457,7 @@ export async function getPayslip(ctx: Ctx, id: string) {
     await assertEmployeeInScope(ctx, s.employeeId);
   }
   const year = Number(s.run.period.slice(0, 4));
+  const late = (await lateness(ctx.tenantId, [s.employeeId], s.run.periodStart, s.run.periodEnd)).get(s.employeeId) ?? { lateDays: 0, lateMinutes: 0 };
   const balances = await db.leaveBalance.findMany({ where: { tenantId: ctx.tenantId, employeeId: s.employeeId, year }, include: { leaveType: { select: { name: true } } } });
   return {
     id: s.id,
@@ -452,6 +470,7 @@ export async function getPayslip(ctx: Ctx, id: string) {
     basic: dec(s.basic), gross: dec(s.gross), totalDeductions: dec(s.totalDeductions), net: dec(s.net),
     epfBase: dec(s.epfBase), epfEmployee: dec(s.epfEmployee), epfEmployer: dec(s.epfEmployer), etf: dec(s.etf), apit: dec(s.apit), stampDuty: dec(s.stampDuty),
     workedDays: Number(s.workedDays), noPayDays: Number(s.noPayDays), otMinutes: s.otMinutes, warnings: s.warnings,
+    lateDays: late.lateDays, lateMinutes: late.lateMinutes,
     lines: s.lines.map((l) => ({ code: l.code, label: l.label, kind: l.kind, amount: dec(l.amount), quantity: l.code === 'LOAN' ? null : l.quantity })),
     leave: balances.map((b) => ({ name: b.leaveType.name, available: Number(b.entitled) + Number(b.carried) + Number(b.adjusted) - Number(b.taken), taken: Number(b.taken) })),
   };
@@ -499,7 +518,7 @@ export async function registerRows(ctx: Ctx, id: string) {
   const run = await getRun(ctx, id);
   return run.payslips.map((p) => {
     const x = p.snapshot as Record<string, string | null>;
-    return { empNo: x.empNo, name: x.name, designation: x.designation, department: x.department, basic: p.basic, gross: p.gross, epf8: p.epfEmployee, apit: p.apit, deductions: p.totalDeductions, net: p.net, epf12: p.epfEmployer, etf3: p.etf, noPayDays: p.noPayDays, otHours: (p.otMinutes / 60).toFixed(2) };
+    return { empNo: x.empNo, name: x.name, designation: x.designation, department: x.department, basic: p.basic, gross: p.gross, epf8: p.epfEmployee, apit: p.apit, deductions: p.totalDeductions, net: p.net, epf12: p.epfEmployer, etf3: p.etf, noPayDays: p.noPayDays, otHours: (p.otMinutes / 60).toFixed(2), lateDays: p.lateDays, lateMinutes: p.lateMinutes };
   });
 }
 

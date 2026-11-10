@@ -32,6 +32,15 @@ const ALLOWED: Record<string, string[]> = {
 /** Multer in memory; we validate, then write ourselves. */
 export const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
 
+/** The image type from the first bytes of a file, or null. */
+export function sniffImage(b: Buffer | undefined): string | null {
+  if (!b || b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  return null;
+}
+
 export async function saveUpload(
   file: Express.Multer.File | undefined,
   purpose: keyof typeof ALLOWED | 'PAYSLIP',
@@ -39,6 +48,11 @@ export async function saveUpload(
   userId: string | null,
 ) {
   if (!file) throw badRequest('Choose a file to upload.');
+  // Phone apps often send images as application/octet-stream: trust the file's own bytes instead.
+  if (!file.mimetype || file.mimetype === 'application/octet-stream') {
+    const sniffed = sniffImage(file.buffer);
+    if (sniffed) file.mimetype = sniffed;
+  }
   const allowed = ALLOWED[purpose as keyof typeof ALLOWED];
   const ext = extname(file.originalname).toLowerCase();
   if (allowed && !allowed.includes(file.mimetype) && !(purpose === 'IMPORT' && ['.xlsx', '.csv'].includes(ext))) {

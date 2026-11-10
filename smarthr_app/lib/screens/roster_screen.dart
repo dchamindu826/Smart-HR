@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../core/api.dart';
+import '../core/live.dart';
 import '../core/format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -35,6 +36,20 @@ class _RosterScreenState extends State<RosterScreen> {
     _selectedDate = todayStr();
     _selectedWeekStart = _findMonday(now);
     _fetchRoster();
+    // HR may publish or change the roster at any time: reload when the tab is opened or the app returns.
+    Live.tab.addListener(_onLive);
+    Live.resumed.addListener(_onLive);
+  }
+
+  void _onLive() {
+    if (mounted && Live.tab.value == 'Roster') _fetchRoster();
+  }
+
+  @override
+  void dispose() {
+    Live.tab.removeListener(_onLive);
+    Live.resumed.removeListener(_onLive);
+    super.dispose();
   }
 
   DateTime _findMonday(DateTime d) {
@@ -47,19 +62,25 @@ class _RosterScreenState extends State<RosterScreen> {
       _error = null;
     });
 
-    final y = _selectedMonth.year;
-    final m = _selectedMonth.month.toString().padLeft(2, '0');
-    final lastDay = DateTime(y, _selectedMonth.month + 1, 0).day.toString().padLeft(2, '0');
-
-    final from = '$y-$m-01';
-    final to = '$y-$m-$lastDay';
+    // Load whole weeks around the month, so the week view is complete when a
+    // week crosses into the previous or next month.
+    final fmt = DateFormat('yyyy-MM-dd');
+    final monthStart = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+    final monthEnd = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+    var fromDay = _findMonday(monthStart);
+    var toDay = _findMonday(monthEnd).add(const Duration(days: 6));
+    final weekEnd = _selectedWeekStart.add(const Duration(days: 6));
+    if (_selectedWeekStart.isBefore(fromDay)) fromDay = _selectedWeekStart;
+    if (weekEnd.isAfter(toDay)) toDay = weekEnd;
+    final from = fmt.format(fromDay);
+    final to = fmt.format(toDay);
 
     try {
       final res = asMap(await Api.instance.get('/roster/mine?from=$from&to=$to'));
       if (!mounted) return;
       setState(() {
         _days = asList(res['days']);
-        _defaultShift = asMap(res['defaultShift']);
+        _defaultShift = res['defaultShift'] == null ? null : asMap(res['defaultShift']);
         _loading = false;
       });
     } on ApiError catch (e) {
@@ -118,25 +139,29 @@ class _RosterScreenState extends State<RosterScreen> {
   }
 
   void _prevWeek() {
+    var reload = false;
     setState(() {
       _selectedWeekStart = _selectedWeekStart.subtract(const Duration(days: 7));
       _selectedDate = DateFormat('yyyy-MM-dd').format(_selectedWeekStart);
       if (_selectedWeekStart.month != _selectedMonth.month || _selectedWeekStart.year != _selectedMonth.year) {
         _selectedMonth = DateTime(_selectedWeekStart.year, _selectedWeekStart.month, 1);
-        _fetchRoster();
+        reload = true;
       }
     });
+    if (reload) _fetchRoster();
   }
 
   void _nextWeek() {
+    var reload = false;
     setState(() {
       _selectedWeekStart = _selectedWeekStart.add(const Duration(days: 7));
       _selectedDate = DateFormat('yyyy-MM-dd').format(_selectedWeekStart);
       if (_selectedWeekStart.month != _selectedMonth.month || _selectedWeekStart.year != _selectedMonth.year) {
         _selectedMonth = DateTime(_selectedWeekStart.year, _selectedWeekStart.month, 1);
-        _fetchRoster();
+        reload = true;
       }
     });
+    if (reload) _fetchRoster();
   }
 
   Map<String, dynamic>? _dayData(String dateStr) {

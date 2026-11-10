@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import '../core/live.dart';
 import '../core/session.dart';
+import '../widgets/common.dart';
 import '../theme.dart';
 import 'home_screen.dart';
 import 'leave_screen.dart';
@@ -16,8 +19,45 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
-class _ShellState extends State<Shell> {
+class _ShellState extends State<Shell> with WidgetsBindingObserver {
   int _i = 0;
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkBadges(first: true);
+    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _checkBadges());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s != AppLifecycleState.resumed) return;
+    // HR may have changed settings, the roster or my profile while the app was closed.
+    context.read<Session>().reloadMe().catchError((_) {});
+    Live.resumed.value++;
+    _checkBadges();
+  }
+
+  /// Polls unread counts; tells the user when something new arrives while the app is open.
+  Future<void> _checkBadges({bool first = false}) async {
+    final before = Live.badges.value;
+    final now = await Live.refreshBadges();
+    if (first || !mounted) return;
+    if (now.messages > before.messages) {
+      toast(context, 'New message. Open More → Messages.');
+    } else if (now.announcements > before.announcements) {
+      toast(context, 'New announcement. Open More → Announcements.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +124,11 @@ class _ShellState extends State<Shell> {
               final active = idx == i;
               final tab = tabs[idx];
               return GestureDetector(
-                onTap: () => setState(() => _i = idx),
+                onTap: () {
+                  setState(() => _i = idx);
+                  Live.tab.value = tab.label;
+                  if (tab.label == 'More') _checkBadges(first: true);
+                },
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 240),
@@ -109,10 +153,19 @@ class _ShellState extends State<Shell> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        tab.icon,
-                        size: 22,
-                        color: active ? Colors.white : const Color(0xFF94A3B8),
+                      ValueListenableBuilder<Badges>(
+                        valueListenable: Live.badges,
+                        builder: (context, b, child) => Badge(
+                          isLabelVisible: tab.label == 'More' && b.total > 0,
+                          label: Text(b.total > 99 ? '99+' : '${b.total}'),
+                          backgroundColor: Brand.magenta,
+                          child: child,
+                        ),
+                        child: Icon(
+                          tab.icon,
+                          size: 22,
+                          color: active ? Colors.white : const Color(0xFF94A3B8),
+                        ),
                       ),
                       if (active) ...[
                         const SizedBox(width: 6),

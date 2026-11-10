@@ -88,7 +88,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Opens the Confirmation Modal before Mark-in or Mark-out.
-  Future<void> _requestPunch(String kind, Me me) async {
+  Future<void> _requestPunch(String kind, Me stale) async {
+    // Always use the latest company rules (HR may have switched location or face check off).
+    final session = context.read<Session>();
+    try {
+      await session.reloadMe();
+    } catch (_) {}
+    if (!mounted) return;
+    final me = session.me ?? stale;
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -447,6 +454,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
+            // Late: first mark-in after the rostered start + the company's grace period
+            if (((t['lateMinutes'] as num?) ?? 0) > 0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4E5),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF5B754)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFFB45309)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Late by ${dur(t['lateMinutes'] as num)}'
+                    '${t['rosterStart'] != null ? ' · start ${hhmm(t['rosterStart'] as num)}' : ''}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFB45309)),
+                  ),
+                ]),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Policy Indicators (Location / Face requirement badges set by HR)

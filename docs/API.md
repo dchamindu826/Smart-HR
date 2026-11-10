@@ -366,3 +366,14 @@ Generated from `backend/src/modules/*/routes.ts`. Request bodies are the zod sch
 | PUT | `/api/v1/platform/system/:key` |  |
 | PUT | `/api/v1/platform/system-tax-table` |  |
 | GET | `/api/v1/platform/audit` |  |
+
+### Later additions
+
+| Method | Path | What |
+|---|---|---|
+| GET | `/me/badges` | `{messages, announcements, notifications, total}` unread counts for the app |
+| GET | `/attendance/today` | now also `rosterStart`, `graceMinutes`, `lateMinutes` |
+| GET | `/payroll/runs/:id`, `/payslips/:id` | each payslip now has `lateDays`, `lateMinutes` (information only, no deduction) |
+
+Sample payslips for a **demo** company: `cd backend && npm run demo:payslips -- <slug> [months]`
+(attendance with some late days, a published roster and a released payroll for the last full months; refuses real companies).

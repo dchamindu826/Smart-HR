@@ -7,7 +7,10 @@
 import type { Prisma } from '@prisma/client';
 import { db } from '../../core/db.js';
 import { hashPassword } from '../../core/auth.js';
-import { addDays, colomboDate, colomboInstant, dbDate, isoWeekday, weekStart } from '../../lib/time.js';
+import { addDays, colomboDate, colomboInstant, dbDate, fromDbDate, isoWeekday, monthRange, weekStart } from '../../lib/time.js';
+import { readSettings, rosterRules } from '../../core/settings.js';
+import type { Ctx } from '../../core/context.js';
+import * as payroll from '../payroll/service.js';
 import { closeTenantDay } from '../attendance/dayclose.js';
 import { ensureBalances } from '../leave/service.js';
 import { planDay } from '../../rules/roster.js';
@@ -178,4 +181,86 @@ async function session(tenantId: string, employeeId: string, date: string, start
   await db.attendanceSession.create({
     data: { tenantId, employeeId, date: dbDate(date), startAt, endAt, minutes: end - start, mode, source: 'APP', branchId, closedBy: 'USER', inLat: mode === 'OFFICE' ? 6.9022 : 6.91, inLng: mode === 'OFFICE' ? 79.853 : 79.87 },
   });
+}
+
+// ─── Sample payslips (demo accounts only) ──────────────────────
+
+/**
+ * Fills the last `months` full months of a DEMO company with attendance (some
+ * people late, a few absences), a published roster for the operations team,
+ * and a released payroll — so payslips, lateness and reports can be tried in
+ * the app and the web. Uses the real payroll code. Safe to run twice.
+ */
+export async function addDemoPayslips(tenantId: string, months = 2) {
+  const t = await db.tenant.findUniqueOrThrow({ where: { id: tenantId }, include: { plan: true } });
+  if (!t.isDemo) throw new Error('Sample payslips are only for demo companies.');
+  const owner = await db.user.findFirst({ where: { tenantId, role: 'OWNER', active: true } });
+  if (!owner) throw new Error('The demo company has no active owner login.');
+  const ctx: Ctx = {
+    userId: owner.id, tenantId, role: owner.role, name: owner.name, employeeId: owner.employeeId,
+    branchScope: owner.branchScope, deptScope: owner.deptScope, features: new Set(t.plan.features), planCode: t.plan.code,
+    tenantStatus: t.status, settings: readSettings(t.settings), ip: null,
+  };
+  const rand = rng(7);
+  const today = colomboDate(new Date());
+  const emps = await db.employee.findMany({ where: { tenantId, isSample: true, status: 'ACTIVE' }, select: { id: true, joinDate: true, branchId: true, rosterGroupId: true, defaultShiftPatternId: true }, orderBy: { empNo: 'asc' } });
+  const group = await db.rosterGroup.findFirst({ where: { tenantId } });
+  const gen = await db.shiftPattern.findFirst({ where: { tenantId, code: 'GEN' } });
+  const rRules = rosterRules(ctx.settings);
+  const done: string[] = [];
+
+  for (let m = months; m >= 1; m--) {
+    const first = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
+    first.setUTCMonth(first.getUTCMonth() - m);
+    const period = first.toISOString().slice(0, 7);
+    const { start, end } = monthRange(period);
+    const existing = await db.payrollRun.findUnique({ where: { tenantId_period: { tenantId, period } } });
+    if (existing && existing.status === 'LOCKED') {
+      if (!existing.releasedAt) await payroll.release(ctx, existing.id);
+      done.push(period);
+      continue;
+    }
+
+    // published roster for the operations team (08:30–17:30, Mon–Fri)
+    if (group && gen) {
+      const members = emps.filter((e) => e.rosterGroupId === group.id);
+      for (let ws = weekStart(start); ws <= end; ws = addDays(ws, 7)) {
+        if (await db.rosterWeek.findFirst({ where: { tenantId, groupId: group.id, weekStart: dbDate(ws) } })) continue;
+        const week = await db.rosterWeek.create({ data: { tenantId, groupId: group.id, weekStart: dbDate(ws), status: 'PUBLISHED', preparedById: owner.id, submittedAt: new Date(), decidedById: owner.id, decidedAt: new Date(), publishedAt: new Date() } });
+        for (const e of members) {
+          for (let d = 0; d < 7; d++) {
+            const date = addDays(ws, d);
+            const segs = d >= 5 ? [] : [{ start: 510, end: 1050, mode: 'OFFICE' as const }];
+            const p = planDay(segs, rRules);
+            await db.rosterDay.create({ data: { tenantId, weekId: week.id, employeeId: e.id, date: dbDate(date), shiftPatternId: segs.length ? gen.id : null, segments: segs as unknown as Prisma.InputJsonValue, isOff: !segs.length, totalMinutes: p.totalMinutes, paidMinutes: p.paidMinutes, plannedOtMinutes: p.plannedOtMinutes } });
+          }
+        }
+      }
+    }
+
+    // attendance on weekdays; a few people late, a few absences
+    for (let date = start; date <= end; date = addDays(date, 1)) {
+      if (isoWeekday(date) >= 6 || date >= today) continue;
+      for (const [i, e] of emps.entries()) {
+        if (date < fromDbDate(e.joinDate)) continue;
+        if (await db.attendanceSession.findFirst({ where: { tenantId, employeeId: e.id, date: dbDate(date) } })) continue;
+        if (rand() < 0.03) continue; // absent
+        const late = i % 4 === 2 && rand() < 0.35 ? 20 + Math.floor(rand() * 40) : 0;
+        const startMin = 495 + Math.floor(rand() * 25) + late;
+        const endMin = 1050 + Math.floor(rand() * 25);
+        await session(tenantId, e.id, date, startMin, endMin, 'OFFICE', e.branchId);
+      }
+      await closeTenantDay(tenantId, date);
+    }
+
+    const run = existing ?? (await payroll.createRun(ctx, period));
+    if (run.status === 'APPROVED') await payroll.reopen(ctx, run.id);
+    await payroll.calculate(ctx, run.id);
+    await payroll.approve(ctx, run.id);
+    await payroll.lock(ctx, run.id);
+    const after = await db.payrollRun.findUniqueOrThrow({ where: { id: run.id } });
+    if (!after.releasedAt) await payroll.release(ctx, run.id);
+    done.push(period);
+  }
+  return { periods: done };
 }

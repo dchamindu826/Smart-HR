@@ -7,6 +7,7 @@ import { assertCan } from '../../core/permissions.js';
 import { assertWritable, requireFeature, type Ctx } from '../../core/context.js';
 import { writeAudit } from '../../core/audit.js';
 import { notify, sendPush } from '../../core/notify.js';
+import { hasFeature } from '../../core/features.js';
 
 // ─── Announcements ─────────────────────────────────────────────
 
@@ -224,4 +225,14 @@ export async function unreadCount(ctx: Ctx) {
   let n = 0;
   for (const m of mems) n += await db.message.count({ where: { conversationId: m.conversationId, senderId: { not: ctx.userId }, deletedAt: null, ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}) } });
   return n;
+}
+
+/** Unread counts for the app's badges: messages, announcements and notifications. */
+export async function badges(ctx: Ctx) {
+  const [messages, notifications, announcements] = await Promise.all([
+    hasFeature(ctx.features, 'messaging') ? unreadCount(ctx) : Promise.resolve(0),
+    db.notification.count({ where: { userId: ctx.userId, readAt: null } }),
+    hasFeature(ctx.features, 'announcements') ? feed(ctx, 100).then((rows) => rows.filter((a) => !a.read).length) : Promise.resolve(0),
+  ]);
+  return { messages, announcements, notifications, total: messages + announcements };
 }
